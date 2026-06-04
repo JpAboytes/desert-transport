@@ -1,3 +1,263 @@
 @tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* ============================================================
+   SISTEMA EDITORIAL — BLANCO / NEGRO / ESCALA DE GRISES
+   Inspiración: diseño corporativo 80s-90s, formularios
+   administrativos, prensa impresa minimalista B&W
+   ============================================================ */
+
+:root {
+  --ink:        #0a0a0a;
+  --ink-mid:    #444444;
+  --ink-light:  #888888;
+  --rule:       #bbbbbb;
+  --paper:      #ffffff;
+  --paper-tint: #f2f1ee;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Página base ─────────────────────────────────────────── */
+
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.page--login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--paper);
+}
+
+/* ── Cabecera (masthead periódico) ───────────────────────── */
+
+.masthead {
+  border-top: 5px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.masthead__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.masthead__title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.masthead__subtitle {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+
+.masthead__action {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.masthead__action:hover {
+  color: var(--ink-mid);
+}
+
+/* ── Área de contenido ───────────────────────────────────── */
+
+.content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+/* ── Bloque de datos de usuario ──────────────────────────── */
+
+.user-block {
+  border-top: 3px solid var(--ink);
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2.5rem;
+}
+
+.user-block__name {
+  font-family: Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+}
+
+.user-block__meta {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+
+/* ── Mensaje de bienvenida ───────────────────────────────── */
+
+.welcome-msg {
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* ── Cabecera de login ───────────────────────────────────── */
+
+.login-head {
+  width: 100%;
+  max-width: 400px;
+  border-top: 5px solid var(--ink);
+  padding-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.login-head__title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.login-head__rule {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 0.75rem 0;
+}
+
+.login-head__sub {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+/* ── Formulario ──────────────────────────────────────────── */
+
+.form {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 0.55rem 0.75rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-input:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ── Mensaje de error ────────────────────────────────────── */
+
+.form-error {
+  border-left: 3px solid var(--ink);
+  background: var(--paper-tint);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+/* ── Botón principal ─────────────────────────────────────── */
+
+.btn-submit {
+  display: block;
+  width: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 0;
+  padding: 0.75rem 1.5rem;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-submit:disabled {
+  background: var(--ink-light);
+  cursor: not-allowed;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--ink-mid);
+}

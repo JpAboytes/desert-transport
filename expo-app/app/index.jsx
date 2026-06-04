@@ -13,6 +13,17 @@ import {
 import { router } from 'expo-router';
 import { login } from '../services/auth';
 
+const INK       = '#0a0a0a';
+const INK_MID   = '#444444';
+const INK_LIGHT = '#888888';
+const RULE      = '#bbbbbb';
+const PAPER     = '#ffffff';
+const PAPER_TINT = '#f2f1ee';
+
+const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+const sans  = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
+const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+
 export default function LoginScreen() {
   const [form, setForm] = useState({ usuario: '', password: '' });
   const [error, setError] = useState('');
@@ -44,12 +55,12 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Ícono */}
-        <View style={styles.iconWrap}>
-          <Text style={styles.iconText}>⚡</Text>
+        {/* Cabecera editorial */}
+        <View style={styles.loginHead}>
+          <Text style={styles.loginTitle}>{'Sistema de Gestión\nde Reparaciones'}</Text>
+          <View style={styles.thinRule} />
+          <Text style={styles.loginSub}>Transporte App — Acceso al sistema</Text>
         </View>
-        <Text style={styles.title}>Transporte App</Text>
-        <Text style={styles.subtitle}>Sistema de gestión de reparaciones</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
@@ -58,8 +69,8 @@ export default function LoginScreen() {
             style={styles.input}
             value={form.usuario}
             onChangeText={(v) => setForm((p) => ({ ...p, usuario: v }))}
-            placeholder="Ingresa tu usuario"
-            placeholderTextColor="#64748b"
+            placeholder="usuario"
+            placeholderTextColor={INK_LIGHT}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -69,21 +80,25 @@ export default function LoginScreen() {
             style={styles.input}
             value={form.password}
             onChangeText={(v) => setForm((p) => ({ ...p, password: v }))}
-            placeholder="Ingresa tu contraseña"
-            placeholderTextColor="#64748b"
+            placeholder="contraseña"
+            placeholderTextColor={INK_LIGHT}
             secureTextEntry
           />
 
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
+          {!!error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
             onPress={handleLogin}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={PAPER} />
               : <Text style={styles.btnText}>Iniciar sesión</Text>
             }
           </TouchableOpacity>
@@ -94,38 +109,93 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: PAPER },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 48,
   },
-  iconWrap: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#f97316', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 16,
+
+  loginHead: {
+    borderTopWidth: 5,
+    borderTopColor: INK,
+    paddingTop: 20,
+    marginBottom: 32,
   },
-  iconText: { fontSize: 32 },
-  title: { color: '#fff', fontSize: 26, fontWeight: 'bold' },
-  subtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4, marginBottom: 32 },
-  form: {
-    width: '100%',
-    backgroundColor: '#1e293b', borderRadius: 16,
-    padding: 24, borderWidth: 1, borderColor: '#334155',
+  loginTitle: {
+    fontFamily: serif,
+    fontSize: 22,
+    fontWeight: '700',
+    color: INK,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    lineHeight: 28,
   },
-  label: { color: '#cbd5e1', fontSize: 13, fontWeight: '500', marginBottom: 4 },
+  thinRule: {
+    borderTopWidth: 1,
+    borderTopColor: RULE,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  loginSub: {
+    fontFamily: sans,
+    fontSize: 10,
+    color: INK_LIGHT,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+
+  form: { width: '100%' },
+  label: {
+    fontFamily: sans,
+    fontSize: 10,
+    fontWeight: '700',
+    color: INK,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
   input: {
-    backgroundColor: '#334155', color: '#fff', borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 13,
-    borderWidth: 1, borderColor: '#475569', marginBottom: 16, fontSize: 15,
+    borderWidth: 1,
+    borderColor: INK,
+    borderRadius: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontFamily: mono,
+    fontSize: 15,
+    color: INK,
+    backgroundColor: PAPER,
+    marginBottom: 20,
   },
-  errorText: { color: '#f87171', fontSize: 13, marginBottom: 8 },
+
+  errorBox: {
+    borderLeftWidth: 3,
+    borderLeftColor: INK,
+    backgroundColor: PAPER_TINT,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontFamily: sans,
+    fontSize: 13,
+    color: INK,
+  },
+
   btn: {
-    backgroundColor: '#f97316', borderRadius: 10,
-    paddingVertical: 14, alignItems: 'center', marginTop: 4,
+    backgroundColor: INK,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 0,
   },
-  btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  btnDisabled: { backgroundColor: INK_LIGHT },
+  btnText: {
+    fontFamily: sans,
+    color: PAPER,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+  },
 });

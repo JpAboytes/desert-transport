@@ -20,36 +20,28 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 px-4 py-4 flex items-center gap-3">
-        <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center font-bold shrink-0">
-          {user.nombre?.charAt(0)?.toUpperCase() || 'U'}
+    <div className="page">
+      <header className="masthead">
+        <div className="masthead__brand">
+          <span className="masthead__title">Transporte App</span>
+          <span className="masthead__subtitle">Sistema de gestión de reparaciones</span>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{user.nombre}</p>
-          <p className="text-xs text-slate-400">{user.tusuario}</p>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-slate-400 hover:text-red-400 transition shrink-0"
-        >
+        <button className="masthead__action" onClick={handleLogout}>
           Cerrar sesión
         </button>
       </header>
 
-      {/* Contenido principal */}
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-4">
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <h2 className="text-xl font-bold text-orange-400 mb-1">
-            {getWelcomeMessage(user.tusuario)}
-          </h2>
-          <p className="text-slate-400 text-sm">
-            {user.nombre} &middot; @{user.usuario}
+      <main className="content">
+        <div className="user-block">
+          <p className="user-block__name">{user.nombre}</p>
+          <p className="user-block__meta">
+            {user.tusuario}&nbsp;&middot;&nbsp;@{user.usuario}
           </p>
         </div>
 
-        {/* TODO: Fase 2 — tarjetas de solicitudes de reparación asignadas */}
+        <p className="welcome-msg">{getWelcomeMessage(user.tusuario)}</p>
+
+        {/* TODO: Fase 2 — listado de solicitudes de reparación asignadas */}
       </main>
     </div>
   );
