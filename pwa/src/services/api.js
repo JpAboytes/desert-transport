@@ -14,6 +14,10 @@ api.interceptors.request.use((config) => {
 export const loginRequest = (usuario, password) =>
   api.post('/login', { usuario, password });
 
-// TODO: Fase 2 — agregar endpoints de solicitudes de reparación
+export const getUnidades = (tipo) =>
+  api.get('/unidades', { params: { tipo } });
+
+export const crearSolicitud = (data) =>
+  api.post('/solicitudes', data);
 
 export default api;
