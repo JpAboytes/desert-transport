@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Transporte App",
+    "slug": "transporte-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "transporte",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.transporte.app"
+    },
+    "android": {
+      "package": "com.transporte.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
