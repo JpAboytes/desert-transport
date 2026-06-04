@@ -1,0 +1,386 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Modal, FlatList, ActivityIndicator, Platform,
+} from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { getUnidades, crearSolicitud, getMisSolicitudes } from '../services/solicitudes';
+
+const INK        = '#0a0a0a';
+const INK_MID    = '#444444';
+const INK_LIGHT  = '#888888';
+const RULE       = '#bbbbbb';
+const PAPER      = '#ffffff';
+const PAPER_TINT = '#f2f1ee';
+
+const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+const sans  = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
+const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
+
+const TIPOS_UNIDAD = ['Camión', 'Remolque'];
+const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
+
+function formatFecha(raw) {
+  if (!raw) return '—';
+  return new Date(raw).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// ── Select modal B&W ─────────────────────────────────────────
+function CustomSelect({ value, options, onChange, placeholder, disabled }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        style={[styles.input, styles.selectTrigger, disabled && { borderColor: RULE }]}
+        onPress={() => !disabled && setVisible(true)}
+        activeOpacity={0.7}
+        disabled={disabled}
+      >
+        <Text style={[styles.monoText, !value && { color: INK_LIGHT }]}>
+          {disabled ? 'Cargando...' : (value || placeholder)}
+        </Text>
+        <Text style={styles.selectCaret}>▾</Text>
+      </TouchableOpacity>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
+          <View style={styles.sheet}>
+            <FlatList
+              data={options}
+              keyExtractor={(item, i) => `${item}-${i}`}
+              ItemSeparatorComponent={() => <View style={styles.sheetDivider} />}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.sheetOption} onPress={() => { onChange(item); setVisible(false); }}>
+                  <Text style={[styles.sheetOptionText, item === value && { fontWeight: '700' }]}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
+}
+
+// ── Lista mis solicitudes ─────────────────────────────────────
+function MisSolicitudes({ refreshKey }) {
+  const [lista, setLista] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await getMisSolicitudes();
+      setLista(data.data ?? []);
+    } catch {
+      setLista([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar, refreshKey]);
+
+  const estatusStyle = (estatus) => ({
+    Pendiente:  styles.estatusPendiente,
+    Autorizado: styles.estatusAutorizado,
+    Rechazado:  styles.estatusRechazado,
+  }[estatus] ?? {});
+
+  if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
+
+  if (!lista.length) return (
+    <Text style={styles.emptyText}>Aún no tienes solicitudes registradas.</Text>
+  );
+
+  return (
+    <>
+      {lista.map((s, i) => (
+        <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
+          <View style={styles.solicitudHeader}>
+            <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
+            <View style={[styles.estatusBadge, estatusStyle(s.estatus)]}>
+              <Text style={[styles.estatusText, estatusStyle(s.estatus)]}>{s.estatus.toUpperCase()}</Text>
+            </View>
+          </View>
+          <Text style={styles.solicitudMeta}>
+            {s.tunidad} · {s.numeconomico} · {formatFecha(s.fechahora)}
+          </Text>
+          {s.odometro != null && (
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>Odómetro  </Text>
+              <Text style={styles.campoValor}>{Number(s.odometro).toLocaleString('es-MX')} km</Text>
+            </View>
+          )}
+          <View style={styles.campo}>
+            <Text style={styles.campoLabel}>Descripción  </Text>
+            <Text style={styles.campoValor}>{s.descripcion}</Text>
+          </View>
+          <View style={styles.campo}>
+            <Text style={styles.campoLabel}>Costo  </Text>
+            <Text style={styles.campoValor}>
+              ${Number(s.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            </Text>
+          </View>
+          {s.nombreaprobador && (
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>
+                {s.estatus === 'Autorizado' ? 'Autorizado por  ' : 'Rechazado por  '}
+              </Text>
+              <Text style={styles.campoValor}>{s.nombreaprobador}</Text>
+            </View>
+          )}
+        </View>
+      ))}
+    </>
+  );
+}
+
+// ── Formulario principal ──────────────────────────────────────
+export default function MecanicoForm({ user, showToast }) {
+  const [form, setForm] = useState({
+    tipoUnidad: '', numeroEconomico: '',
+    descripcionServicio: '', costoEstimado: '', odometro: '',
+  });
+  const [fechaHora, setFechaHora] = useState(new Date());
+  const [showPicker, setShowPicker]   = useState(false);
+  const [pickerMode, setPickerMode]   = useState('date');
+  const [unidades, setUnidades] = useState([]);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const esCamion = form.tipoUnidad === 'Camión';
+
+  useEffect(() => {
+    const tipoApi = TIPO_API[form.tipoUnidad];
+    if (!tipoApi) { setUnidades([]); return; }
+    setLoadingUnidades(true);
+    setForm((p) => ({ ...p, numeroEconomico: '' }));
+    getUnidades(tipoApi)
+      .then(({ data }) => setUnidades(data.data ?? []))
+      .catch(() => setUnidades([]))
+      .finally(() => setLoadingUnidades(false));
+  }, [form.tipoUnidad]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const set = (field) => (value) => setForm((p) => ({ ...p, [field]: value }));
+  const setTipo = (value) => setForm((p) => ({ ...p, tipoUnidad: value, numeroEconomico: '' }));
+
+  const onPickerChange = (event, selected) => {
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
+      if (event.type === 'dismissed') return;
+      if (pickerMode === 'date') {
+        // combinar la fecha seleccionada con la hora actual
+        const next = new Date(selected);
+        next.setHours(fechaHora.getHours(), fechaHora.getMinutes());
+        setFechaHora(next);
+        // abrir picker de hora
+        setPickerMode('time');
+        setShowPicker(true);
+      } else {
+        const next = new Date(fechaHora);
+        next.setHours(selected.getHours(), selected.getMinutes());
+        setFechaHora(next);
+        setPickerMode('date');
+      }
+    } else {
+      if (selected) setFechaHora(selected);
+    }
+  };
+
+  const formatFechaHora = (d) =>
+    d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+
+  const handleSubmit = async () => {
+    const { tipoUnidad, numeroEconomico, descripcionServicio, costoEstimado, odometro } = form;
+    if (!tipoUnidad || !numeroEconomico || !descripcionServicio || !costoEstimado) {
+      setErrorMsg('Completa todos los campos requeridos.');
+      setStatus('error');
+      return;
+    }
+    setStatus('loading');
+    setErrorMsg('');
+    try {
+      await crearSolicitud({
+        fechaHora: fechaHora.toISOString(),
+        tipoUnidad, numeroEconomico, descripcionServicio, costoEstimado,
+        ...(esCamion ? { odometro } : {}),
+      });
+      setForm({ tipoUnidad: '', numeroEconomico: '',
+                descripcionServicio: '', costoEstimado: '', odometro: '' });
+      setFechaHora(new Date());
+      setUnidades([]);
+      setStatus(null);
+      setRefreshKey((k) => k + 1);
+      showToast?.('Solicitud enviada correctamente');
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Error al enviar la solicitud');
+      setStatus('error');
+      showToast?.('Error al enviar la solicitud', 'error');
+    }
+  };
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+
+      {/* ── Formulario ── */}
+      <View style={styles.greeting}>
+        <Text style={styles.greetingText}>
+          Hola, <Text style={{ fontWeight: '700' }}>{user.nombre}</Text>
+        </Text>
+        <Text style={styles.greetingSub}>Complete el formulario para solicitar autorización de servicio.</Text>
+      </View>
+
+      <View style={styles.fieldWrap}>
+        <Text style={styles.label}>Fecha y hora</Text>
+        <TouchableOpacity
+          style={[styles.input, styles.selectTrigger]}
+          onPress={() => { setPickerMode('date'); setShowPicker(true); }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.monoText}>{formatFechaHora(fechaHora)}</Text>
+          <Text style={styles.selectCaret}>▾</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showPicker && (
+        <DateTimePicker
+          value={fechaHora}
+          mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          onChange={onPickerChange}
+          locale="es-MX"
+        />
+      )}
+
+      <View style={styles.fieldWrap}>
+        <Text style={styles.label}>Tipo de unidad</Text>
+        <CustomSelect value={form.tipoUnidad} options={TIPOS_UNIDAD} onChange={setTipo} placeholder="— Seleccionar —" />
+      </View>
+
+      {esCamion && (
+        <View style={styles.fieldWrap}>
+          <Text style={styles.label}>Odómetro (km)</Text>
+          <TextInput style={styles.input} value={form.odometro} onChangeText={set('odometro')}
+            placeholder="0" placeholderTextColor={INK_LIGHT} keyboardType="numeric" />
+        </View>
+      )}
+
+      {!!form.tipoUnidad && (
+        <View style={styles.fieldWrap}>
+          <Text style={styles.label}>Número económico</Text>
+          <CustomSelect value={form.numeroEconomico} options={unidades} onChange={set('numeroEconomico')}
+            placeholder="— Seleccionar —" disabled={loadingUnidades} />
+        </View>
+      )}
+
+      <View style={styles.fieldWrap}>
+        <Text style={styles.label}>Descripción del servicio</Text>
+        <TextInput style={[styles.input, styles.textarea]} value={form.descripcionServicio}
+          onChangeText={set('descripcionServicio')} multiline numberOfLines={4}
+          textAlignVertical="top" placeholderTextColor={INK_LIGHT} placeholder="Describe el servicio requerido" />
+      </View>
+
+      <View style={styles.fieldWrap}>
+        <Text style={styles.label}>Costo estimado ($)</Text>
+        <TextInput style={styles.input} value={form.costoEstimado} onChangeText={set('costoEstimado')}
+          placeholder="0.00" placeholderTextColor={INK_LIGHT} keyboardType="decimal-pad" />
+      </View>
+
+      <View style={styles.fieldWrap}>
+        <Text style={styles.label}>Fotografía</Text>
+        <View style={styles.photoPlaceholder}>
+          <Text style={styles.photoPlaceholderText}>Próximamente disponible</Text>
+        </View>
+      </View>
+
+      {status === 'error' && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.btn, status === 'loading' && { backgroundColor: INK_LIGHT }]}
+        onPress={handleSubmit} disabled={status === 'loading'} activeOpacity={0.7}
+      >
+        {status === 'loading'
+          ? <ActivityIndicator color={PAPER} />
+          : <Text style={styles.btnText}>Solicitar autorización</Text>
+        }
+      </TouchableOpacity>
+
+      {/* ── Mis solicitudes ── */}
+      <View style={styles.misSolicitudesSection}>
+        <Text style={styles.sectionTitle}>Mis solicitudes</Text>
+        <View style={styles.sectionRule} />
+        <MisSolicitudes refreshKey={refreshKey} />
+      </View>
+
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll:     { flex: 1 },
+  container:  { padding: 24, paddingBottom: 48 },
+
+  greeting: { borderTopWidth: 3, borderTopColor: INK, paddingTop: 16, marginBottom: 24 },
+  greetingText: { fontFamily: serif, fontSize: 18, color: INK, marginBottom: 4 },
+  greetingSub: { fontFamily: sans, fontSize: 11, letterSpacing: 0.5, color: INK_MID },
+
+  row:       { flexDirection: 'row' },
+  fieldWrap: { marginBottom: 20 },
+  label: {
+    fontFamily: sans, fontSize: 10, fontWeight: '700',
+    letterSpacing: 2, textTransform: 'uppercase', color: INK, marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1, borderColor: INK, borderRadius: 0,
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontFamily: mono, fontSize: 14, color: INK, backgroundColor: PAPER,
+  },
+  monoText: { fontFamily: mono, fontSize: 14, color: INK, flex: 1 },
+  textarea:  { minHeight: 96, textAlignVertical: 'top' },
+
+  selectTrigger: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  selectCaret:   { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
+
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet:   { backgroundColor: PAPER, borderTopWidth: 5, borderTopColor: INK, maxHeight: 320 },
+  sheetDivider:     { borderTopWidth: 1, borderTopColor: RULE },
+  sheetOption:      { paddingHorizontal: 20, paddingVertical: 14 },
+  sheetOptionText:  { fontFamily: mono, fontSize: 14, color: INK },
+
+  photoPlaceholder: { borderWidth: 1, borderColor: RULE, borderStyle: 'dashed', padding: 20, alignItems: 'center' },
+  photoPlaceholderText: { fontFamily: sans, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: INK_LIGHT },
+
+  errorBox:  { borderLeftWidth: 3, borderLeftColor: INK, backgroundColor: PAPER_TINT, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 20 },
+  errorText: { fontFamily: sans, fontSize: 13, color: INK },
+
+  btn:     { backgroundColor: INK, paddingVertical: 14, alignItems: 'center', borderRadius: 0 },
+  btnText: { fontFamily: sans, color: PAPER, fontWeight: '700', fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' },
+
+  // Sección mis solicitudes
+  misSolicitudesSection: { marginTop: 40 },
+  sectionTitle: { fontFamily: serif, fontSize: 18, fontWeight: '700', color: INK },
+  sectionRule:  { borderTopWidth: 3, borderTopColor: INK, marginTop: 8, marginBottom: 8 },
+  emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
+
+  // Items solicitud
+  solicitudItem: { borderBottomWidth: 1, borderBottomColor: INK, paddingVertical: 16 },
+  solicitudHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  solicitudId:  { fontFamily: mono, fontSize: 14, fontWeight: '700', color: INK },
+  solicitudMeta: { fontFamily: sans, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: INK_MID, marginBottom: 8 },
+
+  estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  estatusText:  { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700' },
+  estatusPendiente:  { borderColor: INK_MID, color: INK_MID },
+  estatusAutorizado: { borderColor: INK, color: INK },
+  estatusRechazado:  { borderColor: INK_LIGHT, color: INK_LIGHT },
+
+  campo:      { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 3 },
+  campoLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
+  campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
+});

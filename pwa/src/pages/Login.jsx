@@ -33,7 +33,7 @@ export default function Login() {
           Sistema de Gestión<br />de Reparaciones
         </h1>
         <hr className="login-head__rule" />
-        <p className="login-head__sub">Dessert Trucking &mdash; Acceso al sistema</p>
+        <p className="login-head__sub">Desert Transport &mdash; Acceso al sistema</p>
       </div>
 
       <form className="form" onSubmit={handleSubmit} autoComplete="off">

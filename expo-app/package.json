@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "axios": "^1.7.2",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.0",

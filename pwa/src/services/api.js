@@ -20,4 +20,13 @@ export const getUnidades = (tipo) =>
 export const crearSolicitud = (data) =>
   api.post('/solicitudes', data);
 
+export const getMisSolicitudes = () =>
+  api.get('/mis-solicitudes');
+
+export const getSolicitudes = () =>
+  api.get('/admin/solicitudes');
+
+export const actualizarEstatus = (id, estatus) =>
+  api.patch(`/admin/solicitudes/${id}`, { estatus });
+
 export default api;
