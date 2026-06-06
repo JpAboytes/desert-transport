@@ -26,7 +26,7 @@ export default function Home() {
       </header>
 
       <main className="content">
-        {user.tusuario === 'Usuario' && <MecanicoForm user={user} />}
+        {user.tusuario === 'Mantenimiento' && <MecanicoForm user={user} />}
 
         {user.tusuario === 'Administrador' && (
           <>

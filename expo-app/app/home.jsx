@@ -6,6 +6,7 @@ import { getToken, decodeToken, logout } from '../services/auth';
 import MecanicoForm from '../components/MecanicoForm';
 import AdminView from '../components/AdminView';
 import Toast from '../components/Toast';
+import { registerForNotifications } from '../services/notifications';
 
 const INK     = '#0a0a0a';
 const INK_MID = '#444444';
@@ -28,11 +29,14 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    getToken().then((token) => {
+    getToken().then(async (token) => {
       if (!token) { router.replace('/'); return; }
       const decoded = decodeToken(token);
       if (!decoded) { router.replace('/'); return; }
       setUser(decoded);
+      if (decoded.tusuario === 'Mantenimiento') {
+        await registerForNotifications();
+      }
     });
   }, []);
 
@@ -63,7 +67,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Contenido según rol */}
-      {user.tusuario === 'Usuario' && (
+      {user.tusuario === 'Mantenimiento' && (
         <MecanicoForm user={user} showToast={showToast} />
       )}
 

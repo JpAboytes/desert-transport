@@ -45,3 +45,6 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+
+# Firebase config (NO versionar — contiene API key)
+expo-app/google-services.json

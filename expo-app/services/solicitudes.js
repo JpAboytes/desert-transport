@@ -34,3 +34,8 @@ export const actualizarEstatus = async (id, estatus) => {
   const api = await authAxios();
   return api.patch(`/admin/solicitudes/${id}`, { estatus });
 };
+
+export const registerPushToken = async (expoPushToken) => {
+  const api = await authAxios();
+  return api.put('/push-token', { expoPushToken });
+};

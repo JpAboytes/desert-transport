@@ -12,17 +12,31 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.transporte.app"
+      "bundleIdentifier": "com.deserttransport.app"
     },
     "android": {
-      "package": "com.transporte.app",
+      "package": "com.deserttransport.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a"
       }
     },
     "plugins": [
       "expo-router",
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#0a0a0a"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "24ceda7b-3d14-49c6-938c-a3f2d74e46e9"
+      }
+    },
+    "owner": "jpdessens"
   }
 }
