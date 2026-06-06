@@ -19,6 +19,7 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
+const FILTROS      = ['Todos', 'Pendiente', 'Autorizado', 'Rechazado'];
 
 function formatFecha(raw) {
   if (!raw) return '—';
@@ -65,6 +66,7 @@ function CustomSelect({ value, options, onChange, placeholder, disabled }) {
 function MisSolicitudes({ refreshKey }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState('Todos');
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -88,13 +90,31 @@ function MisSolicitudes({ refreshKey }) {
 
   if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
 
-  if (!lista.length) return (
-    <Text style={styles.emptyText}>Aún no tienes solicitudes registradas.</Text>
-  );
+  // Más reciente primero (por id) + filtro por estatus
+  const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
+  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => s.estatus === filtro);
 
   return (
     <>
-      {lista.map((s, i) => (
+      {/* Filtros por estatus */}
+      <View style={styles.filtros}>
+        {FILTROS.map((f) => (
+          <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={styles.filtroBtn} activeOpacity={0.7}>
+            <Text style={[styles.filtroBtnText, filtro === f && styles.filtroBtnActive]}>{f}</Text>
+            {filtro === f && <View style={styles.filtroIndicator} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {visibles.length === 0 && (
+        <Text style={styles.emptyText}>
+          {lista.length === 0
+            ? 'Aún no tienes solicitudes registradas.'
+            : `Sin solicitudes con estatus "${filtro}".`}
+        </Text>
+      )}
+
+      {visibles.map((s, i) => (
         <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
@@ -149,6 +169,7 @@ export default function MecanicoForm({ user, showToast }) {
   const [status, setStatus] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState('crear');
 
   const esCamion = form.tipoUnidad === 'Camión';
 
@@ -213,6 +234,7 @@ export default function MecanicoForm({ user, showToast }) {
       setUnidades([]);
       setStatus(null);
       setRefreshKey((k) => k + 1);
+      setTab('mis');
       showToast?.('Solicitud enviada correctamente');
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Error al enviar la solicitud');
@@ -224,6 +246,24 @@ export default function MecanicoForm({ user, showToast }) {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
+      {/* ── Pestañas ── */}
+      <View style={styles.segmented}>
+        <TouchableOpacity
+          style={[styles.segment, tab === 'crear' && styles.segmentActive]}
+          onPress={() => setTab('crear')} activeOpacity={0.7}
+        >
+          <Text style={[styles.segmentText, tab === 'crear' && styles.segmentTextActive]}>Crear solicitud</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, styles.segmentRight, tab === 'mis' && styles.segmentActive]}
+          onPress={() => setTab('mis')} activeOpacity={0.7}
+        >
+          <Text style={[styles.segmentText, tab === 'mis' && styles.segmentTextActive]}>Mis solicitudes</Text>
+        </TouchableOpacity>
+      </View>
+
+      {tab === 'crear' ? (
+      <>
       {/* ── Formulario ── */}
       <View style={styles.greeting}>
         <Text style={styles.greetingText}>
@@ -311,12 +351,12 @@ export default function MecanicoForm({ user, showToast }) {
         }
       </TouchableOpacity>
 
-      {/* ── Mis solicitudes ── */}
+      </>
+      ) : (
       <View style={styles.misSolicitudesSection}>
-        <Text style={styles.sectionTitle}>Mis solicitudes</Text>
-        <View style={styles.sectionRule} />
         <MisSolicitudes refreshKey={refreshKey} />
       </View>
+      )}
 
     </ScrollView>
   );
@@ -325,6 +365,14 @@ export default function MecanicoForm({ user, showToast }) {
 const styles = StyleSheet.create({
   scroll:     { flex: 1 },
   container:  { padding: 24, paddingBottom: 48 },
+
+  // Control segmentado (pestañas)
+  segmented:   { flexDirection: 'row', borderWidth: 1, borderColor: INK, marginBottom: 24 },
+  segment:     { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: PAPER },
+  segmentRight:{ borderLeftWidth: 1, borderLeftColor: INK },
+  segmentActive:    { backgroundColor: INK },
+  segmentText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', color: INK },
+  segmentTextActive:{ color: PAPER },
 
   greeting: { borderTopWidth: 3, borderTopColor: INK, paddingTop: 16, marginBottom: 24 },
   greetingText: { fontFamily: serif, fontSize: 18, color: INK, marginBottom: 4 },
@@ -367,6 +415,13 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: serif, fontSize: 18, fontWeight: '700', color: INK },
   sectionRule:  { borderTopWidth: 3, borderTopColor: INK, marginTop: 8, marginBottom: 8 },
   emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
+
+  // Filtros por estatus
+  filtros:        { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: INK, marginBottom: 8 },
+  filtroBtn:      { paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center' },
+  filtroBtnText:  { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
+  filtroBtnActive:{ color: INK },
+  filtroIndicator:{ position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, backgroundColor: INK },
 
   // Items solicitud
   solicitudItem: { borderBottomWidth: 1, borderBottomColor: INK, paddingVertical: 16 },

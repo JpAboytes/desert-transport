@@ -14,6 +14,7 @@ function formatFecha(raw) {
 function MisSolicitudes({ refreshKey }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState('Todos');
 
   useEffect(() => {
     setLoading(true);
@@ -24,11 +25,34 @@ function MisSolicitudes({ refreshKey }) {
   }, [refreshKey]);
 
   if (loading) return <p className="admin-estado">Cargando solicitudes...</p>;
-  if (!lista.length) return <p className="admin-estado">Aún no tienes solicitudes registradas.</p>;
+
+  // Más reciente primero (por id) + filtro por estatus
+  const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
+  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => s.estatus === filtro);
 
   return (
-    <div className="solicitudes-lista">
-      {lista.map((s) => (
+    <>
+      {/* Filtros por estatus */}
+      <div className="admin-filtros">
+        {['Todos', 'Pendiente', 'Autorizado', 'Rechazado'].map((f) => (
+          <button key={f}
+            className={`filtro-btn${filtro === f ? ' filtro-btn--active' : ''}`}
+            onClick={() => setFiltro(f)}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {visibles.length === 0 && (
+        <p className="admin-estado">
+          {lista.length === 0
+            ? 'Aún no tienes solicitudes registradas.'
+            : `Sin solicitudes con estatus "${filtro}".`}
+        </p>
+      )}
+
+      <div className="solicitudes-lista">
+        {visibles.map((s) => (
         <div key={s.idserviciomovil} className="solicitud">
           <div className="solicitud__header">
             <span className="solicitud__id">#{String(s.idserviciomovil).padStart(4, '0')}</span>
@@ -62,8 +86,9 @@ function MisSolicitudes({ refreshKey }) {
             </div>
           )}
         </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -77,6 +102,7 @@ export default function MecanicoForm({ user }) {
   const [status, setStatus] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState('crear');
   const { toast, showToast, hideToast } = useToast();
 
   const esCamion = form.tipoUnidad === 'Camión';
@@ -111,6 +137,7 @@ export default function MecanicoForm({ user }) {
                 descripcionServicio: '', costoEstimado: '', odometro: '' });
       setUnidades([]);
       setRefreshKey((k) => k + 1);
+      setTab('mis');
       showToast('Solicitud enviada correctamente');
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Error al enviar la solicitud');
@@ -123,7 +150,17 @@ export default function MecanicoForm({ user }) {
     <>
       <Toast message={toast.message} type={toast.type} onDismiss={hideToast} />
 
-      {/* ── Formulario ── */}
+      {/* ── Pestañas ── */}
+      <div className="segmented">
+        <button type="button"
+          className={`segmented__btn ${tab === 'crear' ? 'segmented__btn--active' : ''}`}
+          onClick={() => setTab('crear')}>Crear solicitud</button>
+        <button type="button"
+          className={`segmented__btn ${tab === 'mis' ? 'segmented__btn--active' : ''}`}
+          onClick={() => setTab('mis')}>Mis solicitudes</button>
+      </div>
+
+      {tab === 'crear' ? (
       <form className="form form--full" onSubmit={handleSubmit} autoComplete="off">
         <div className="form-greeting">
           <p className="form-greeting__text">Hola, <strong>{user.nombre}</strong></p>
@@ -187,14 +224,14 @@ export default function MecanicoForm({ user }) {
           {status === 'loading' ? 'Enviando...' : 'Solicitar autorización'}
         </button>
       </form>
-
-      {/* ── Mis solicitudes ── */}
-      <div style={{ marginTop: '3rem' }}>
+      ) : (
+      <div>
         <div className="user-block">
           <p className="user-block__name">Mis solicitudes</p>
         </div>
         <MisSolicitudes refreshKey={refreshKey} />
       </div>
+      )}
     </>
   );
 }

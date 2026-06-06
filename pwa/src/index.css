@@ -15,6 +15,33 @@
   --paper-tint: #f2f1ee;
 }
 
+/* ── Control segmentado (pestañas) ───────────────────────── */
+.segmented {
+  display: flex;
+  border: 1px solid var(--ink);
+  margin: 0 0 1.5rem;
+}
+.segmented__btn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.segmented__btn + .segmented__btn {
+  border-left: 1px solid var(--ink);
+}
+.segmented__btn--active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
