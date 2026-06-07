@@ -23,8 +23,8 @@ export const crearSolicitud = (data) =>
 export const getMisSolicitudes = () =>
   api.get('/mis-solicitudes');
 
-export const cerrarReparacion = (id, { costoReal, urlCierre }) =>
-  api.patch(`/mis-solicitudes/${id}`, { costoReal, urlCierre });
+export const cerrarReparacion = (id, { costoReal, fotos }) =>
+  api.patch(`/mis-solicitudes/${id}`, { costoReal, fotos });
 
 export const getPresignUrl = (contentType = 'image/jpeg') =>
   api.post('/uploads/presign', { contentType });

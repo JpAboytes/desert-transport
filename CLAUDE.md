@@ -61,9 +61,9 @@ La UI bifurca por rol en `expo-app/app/home.jsx`. El lambda `admin` rechaza (403
 |---|---|---|---|---|
 | POST | `/login` | `lambda/login` | — | Devuelve `{ token, user }`. |
 | GET | `/unidades?tipo=camion\|remolque` | `lambda/unidades` | JWT | Lista de nombres de unidades. |
-| POST | `/solicitudes` | `lambda/solicitudes` | JWT | Crea solicitud (estatus `Pendiente`). |
-| GET | `/mis-solicitudes` | `lambda/solicitudes` | JWT | Solicitudes del usuario actual. |
-| PATCH | `/mis-solicitudes/{id}` | `lambda/solicitudes` | JWT (dueño) | Cierra reparación: `{ costoReal, urlCierre? }` → `Reparado`. |
+| POST | `/solicitudes` | `lambda/solicitudes` | JWT | Crea solicitud (estatus `Pendiente`); `fotos: string[]` (apertura, máx 7). |
+| GET | `/mis-solicitudes` | `lambda/solicitudes` | JWT | Solicitudes del usuario actual (con `fotos[]`). |
+| PATCH | `/mis-solicitudes/{id}` | `lambda/solicitudes` | JWT (dueño) | Cierra reparación: `{ costoReal, fotos? }` (cierre, máx 7) → `Reparado`. |
 | PUT | `/push-token` | `lambda/solicitudes` | JWT | Guarda `usuario.push_token`. |
 | POST | `/uploads/presign` | `lambda/solicitudes` | JWT | Devuelve `{ uploadUrl, fileUrl }` para subir una foto a S3 (presigned PUT). |
 | POST | `/push/subscribe` | `lambda/solicitudes` | JWT | Guarda (upsert) la suscripción Web Push del PWA en `push_subscriptions`. |
@@ -78,11 +78,13 @@ vivas son las de las subcarpetas. Confirmar en API Gateway antes de tocarlo.
 - **`usuario`**: `idusuario`, `nombre`, `usuario`, `password` (⚠️ texto plano), `tusuario`, `push_token`.
 - **`serviciomovil`** (la solicitud): `idserviciomovil`, `idsolicitante`→usuario, `idaprobador`→usuario,
   `estatus` (`Pendiente`/`Rechazado`/`En proceso`/`Reparado`), `tunidad` (`Camión`/otro=remolque),
-  `odometro`, `numeconomico`, `descripcion`, `costo` (estimado), `urlfoto`, `fechahora`,
+  `odometro`, `numeconomico`, `descripcion`, `costo` (estimado), `fechahora`,
   `PO` (UNIQUE, se asigna al autorizar). Columnas del flujo extendido:
-  `costoreal` DECIMAL, `urlcierre` VARCHAR (foto del cierre en S3), `fechacierre` DATETIME
-  (las llena el mecánico al cerrar), y `autorizacionpago` TINYINT(1) NULL (decisión de pago del admin:
-  NULL=pendiente, 1=autorizado, 0=rechazado). `urlfoto` guarda la foto de la solicitud (en S3).
+  `costoreal` DECIMAL, `fechacierre` DATETIME (las llena el mecánico al cerrar), y
+  `autorizacionpago` TINYINT(1) NULL (decisión de pago del admin: NULL=pendiente, 1=autorizado, 0=rechazado).
+  > Las fotos ya **no** están en esta tabla (se eliminaron `urlfoto`/`urlcierre`); ver `serviciomovil_fotos`.
+- **`serviciomovil_fotos`**: `idfoto`, `idserviciomovil`, `tipo` (`Apertura`|`Cierre`), `url`, `fechacarga`.
+  Hasta **7 fotos de apertura + 7 de cierre** por solicitud (en S3).
 - **`camion`**: `IdCamion`, `NombreC`. — **`cajas`** (remolques): `idcaja`, `Numero`.
 - **`push_subscriptions`**: `id`, `idusuario`, `endpoint` (UNIQUE), `p256dh`, `auth` — suscripciones
   Web Push del PWA (admins).
@@ -106,10 +108,15 @@ La decisión de pago (`{ autorizacionPago }`) es una rama aparte: valida que el 
 
 - **Bucket** `dessert-trucking-fotos` (us-east-2). Prefijo `fotos/` es **lectura pública** (bucket
   policy); el resto no. Keys aleatorias `fotos/<uuid>.jpg`. CORS abierto para PUT desde el navegador.
-- **Subida = presigned URL**: el cliente pide `POST /uploads/presign` (con JWT) → el lambda firma un
-  PUT (expira 120s) y devuelve `{ uploadUrl, fileUrl }`. El cliente **comprime** la imagen (~1280px,
-  JPEG) y hace `PUT` directo a S3; luego manda `fileUrl` en `crearSolicitud` (`urlFoto`) o
-  `cerrarReparacion` (`urlCierre`). El backend nunca recibe el binario.
+- **Hasta 7 fotos por punto**: 7 de apertura (al crear) + 7 de cierre. Se guardan en la tabla
+  `serviciomovil_fotos` (`tipo` Apertura/Cierre), no en columnas de `serviciomovil`.
+- **Subida = presigned URL**: por cada foto el cliente pide `POST /uploads/presign` (con JWT) → el
+  lambda firma un PUT (expira 120s) y devuelve `{ uploadUrl, fileUrl }`. El cliente **comprime**
+  (~1280px, JPEG) y hace `PUT` directo a S3. Luego manda el **arreglo de URLs** en `fotos: string[]`
+  a `crearSolicitud` (→ tipo Apertura) o `cerrarReparacion` (→ tipo Cierre); el backend hace el INSERT
+  en `serviciomovil_fotos` (helper `guardarFotos`, máx 7). Nunca recibe el binario.
+- Los GET de solicitudes adjuntan `fotos: [{ tipo, url }]` por solicitud (helper `adjuntarFotos`, una
+  query con `WHERE idserviciomovil IN (...)`).
 - El rol Lambda `dessert-trucking-role-npsy60tt` tiene `s3:PutObject` sobre `fotos/*` (policy inline
   `dessert-trucking-s3-fotos`). El lambda solicitudes bundlea `@aws-sdk/client-s3` y
   `@aws-sdk/s3-request-presigner`; el bucket por env `S3_BUCKET` con fallback en código.

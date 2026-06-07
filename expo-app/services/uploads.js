@@ -23,3 +23,9 @@ export async function subirFoto(uri) {
 
   return fileUrl;
 }
+
+// Sube varias imágenes locales en paralelo y devuelve el arreglo de URLs públicas.
+export async function subirFotos(uris) {
+  const lista = Array.isArray(uris) ? uris : [];
+  return Promise.all(lista.map((uri) => subirFoto(uri)));
+}

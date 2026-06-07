@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getUnidades, crearSolicitud, getMisSolicitudes, cerrarReparacion } from '../services/api';
-import { subirFoto } from '../services/uploads';
+import { subirFotos } from '../services/uploads';
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
 import FotoPicker from '../components/FotoPicker';
@@ -108,10 +108,9 @@ function MisSolicitudes({ refreshKey }) {
               {s.nombreaprobador}
             </div>
           )}
-          {(s.urlfoto || s.urlcierre) && (
+          {s.fotos?.length > 0 && (
             <div className="solicitud__fotos">
-              {s.urlfoto && <FotoThumb url={s.urlfoto} />}
-              {s.urlcierre && <FotoThumb url={s.urlcierre} />}
+              {s.fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
             </div>
           )}
         </div>
@@ -171,7 +170,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
 // ── Formulario de cierre de un ticket ─────────────────────────
 function CerrarTicketForm({ solicitud, showToast, onClosed }) {
   const [costoReal, setCostoReal] = useState('');
-  const [foto, setFoto] = useState(null);
+  const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
@@ -183,8 +182,8 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
     }
     setLoading(true);
     try {
-      const urlCierre = foto ? await subirFoto(foto) : undefined;
-      await cerrarReparacion(solicitud.idserviciomovil, { costoReal, urlCierre });
+      const urls = await subirFotos(fotos);
+      await cerrarReparacion(solicitud.idserviciomovil, { costoReal, fotos: urls });
       showToast(`Reparación #${String(solicitud.idserviciomovil).padStart(4, '0')} cerrada`);
       onClosed?.();
     } catch {
@@ -202,8 +201,8 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
           value={costoReal} onChange={(e) => setCostoReal(e.target.value)} placeholder="0.00" />
       </div>
       <div className="form-group">
-        <label className="form-label">Fotografía del cierre</label>
-        <FotoPicker file={foto} onChange={setFoto} disabled={loading} />
+        <label className="form-label">Fotografías del cierre (máx. 7)</label>
+        <FotoPicker fotos={fotos} onChange={setFotos} disabled={loading} />
       </div>
       <button type="submit" className="btn-submit" disabled={loading}>
         {loading ? 'Cerrando...' : 'Marcar como reparado'}
@@ -223,7 +222,7 @@ export default function MecanicoForm({ user }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [tab, setTab] = useState('crear');
-  const [foto, setFoto] = useState(null);
+  const [fotos, setFotos] = useState([]);
   const { toast, showToast, hideToast } = useToast();
 
   const esCamion = form.tipoUnidad === 'Camión';
@@ -252,12 +251,12 @@ export default function MecanicoForm({ user }) {
     try {
       const payload = { ...form };
       if (!esCamion) delete payload.odometro;
-      if (foto) payload.urlFoto = await subirFoto(foto);
+      payload.fotos = await subirFotos(fotos);
       await crearSolicitud(payload);
       setStatus(null);
       setForm({ fechaHora: '', tipoUnidad: '', numeroEconomico: '',
                 descripcionServicio: '', costoEstimado: '', odometro: '' });
-      setFoto(null);
+      setFotos([]);
       setUnidades([]);
       setRefreshKey((k) => k + 1);
       setTab('mis');
@@ -340,8 +339,8 @@ export default function MecanicoForm({ user }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Fotografía</label>
-          <FotoPicker file={foto} onChange={setFoto} disabled={status === 'loading'} />
+          <label className="form-label">Fotografías (máx. 7)</label>
+          <FotoPicker fotos={fotos} onChange={setFotos} disabled={status === 'loading'} />
         </div>
 
         {status === 'error' && <div className="form-error">{errorMsg}</div>}

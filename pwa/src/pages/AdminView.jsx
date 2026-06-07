@@ -109,20 +109,20 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
         </div>
       )}
 
-      {(s.urlfoto || s.urlcierre) && (
+      {s.fotos?.length > 0 && (
         <div className="solicitud__fotos">
-          {s.urlfoto && (
-            <div className="solicitud__foto-col">
-              <span className="solicitud__field-label">Solicitud</span>
-              <FotoThumb url={s.urlfoto} />
-            </div>
-          )}
-          {s.urlcierre && (
-            <div className="solicitud__foto-col">
-              <span className="solicitud__field-label">Cierre</span>
-              <FotoThumb url={s.urlcierre} />
-            </div>
-          )}
+          {['Apertura', 'Cierre'].map((tipo) => {
+            const fs = s.fotos.filter((f) => f.tipo === tipo);
+            if (fs.length === 0) return null;
+            return (
+              <div key={tipo} className="solicitud__foto-col">
+                <span className="solicitud__field-label">{tipo}</span>
+                <div className="solicitud__fotos-row">
+                  {fs.map((f, i) => <FotoThumb key={i} url={f.url} />)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

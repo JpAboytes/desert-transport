@@ -23,3 +23,9 @@ export async function subirFoto(file) {
 
   return fileUrl;
 }
+
+// Sube varios archivos en paralelo y devuelve el arreglo de URLs públicas.
+export async function subirFotos(files) {
+  const lista = Array.from(files ?? []);
+  return Promise.all(lista.map((f) => subirFoto(f)));
+}

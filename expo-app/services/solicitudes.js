@@ -40,9 +40,9 @@ export const getPresignUrl = async (contentType = 'image/jpeg') => {
   return api.post('/uploads/presign', { contentType });
 };
 
-export const cerrarReparacion = async (id, { costoReal, urlCierre }) => {
+export const cerrarReparacion = async (id, { costoReal, fotos }) => {
   const api = await authAxios();
-  return api.patch(`/mis-solicitudes/${id}`, { costoReal, urlCierre });
+  return api.patch(`/mis-solicitudes/${id}`, { costoReal, fotos });
 };
 
 // Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).

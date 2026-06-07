@@ -521,8 +521,19 @@ body {
 .notif-banner--ok { color: var(--ink); }
 
 /* ── Fotos ── */
-.solicitud__fotos { display: flex; gap: 1rem; margin-top: 0.5rem; }
+.solicitud__fotos { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem; }
 .solicitud__foto-col { display: flex; flex-direction: column; gap: 0.25rem; }
+.solicitud__fotos-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+/* Picker múltiple */
+.foto-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem; }
+.foto-grid__item { position: relative; }
+.foto-grid__item img { width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--rule); display: block; }
+.foto-grid__remove {
+  position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%;
+  border: none; background: var(--ink); color: var(--paper); font-size: 14px; line-height: 1; cursor: pointer;
+}
+.foto-picker__contador { display: block; margin-top: 0.4rem; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-light); }
 
 .foto-thumb {
   object-fit: cover;

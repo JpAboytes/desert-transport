@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getUnidades, crearSolicitud, getMisSolicitudes, cerrarReparacion } from '../services/solicitudes';
-import { subirFoto } from '../services/uploads';
+import { subirFotos } from '../services/uploads';
 import FotoPicker from './FotoPicker';
 import FotoThumb from './FotoThumb';
 
@@ -171,10 +171,9 @@ function MisSolicitudes({ refreshKey }) {
               <Text style={styles.campoValor}>{s.nombreaprobador}</Text>
             </View>
           )}
-          {(s.urlfoto || s.urlcierre) && (
+          {s.fotos?.length > 0 && (
             <View style={styles.fotosRow}>
-              {s.urlfoto && <FotoThumb url={s.urlfoto} />}
-              {s.urlcierre && <FotoThumb url={s.urlcierre} />}
+              {s.fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
             </View>
           )}
         </View>
@@ -242,7 +241,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
 // ── Formulario de cierre de un ticket ─────────────────────────
 function CerrarTicketForm({ solicitud, showToast, onClosed }) {
   const [costoReal, setCostoReal] = useState('');
-  const [fotoUri, setFotoUri] = useState(null);
+  const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
@@ -253,8 +252,8 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
     }
     setLoading(true);
     try {
-      const urlCierre = fotoUri ? await subirFoto(fotoUri) : undefined;
-      await cerrarReparacion(solicitud.idserviciomovil, { costoReal, urlCierre });
+      const urls = await subirFotos(fotos);
+      await cerrarReparacion(solicitud.idserviciomovil, { costoReal, fotos: urls });
       showToast?.(`Reparación #${String(solicitud.idserviciomovil).padStart(4, '0')} cerrada`);
       onClosed?.();
     } catch {
@@ -275,8 +274,8 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
         placeholderTextColor={INK_LIGHT}
         keyboardType="decimal-pad"
       />
-      <Text style={[styles.label, { marginTop: 12 }]}>Fotografía del cierre</Text>
-      <FotoPicker uri={fotoUri} onChange={setFotoUri} disabled={loading} />
+      <Text style={[styles.label, { marginTop: 12 }]}>Fotografías del cierre (máx. 7)</Text>
+      <FotoPicker fotos={fotos} onChange={setFotos} disabled={loading} />
       <TouchableOpacity
         style={[styles.btn, { marginTop: 12 }, loading && { backgroundColor: INK_LIGHT }]}
         onPress={submit}
@@ -299,7 +298,7 @@ export default function MecanicoForm({ user, showToast }) {
     descripcionServicio: '', costoEstimado: '', odometro: '',
   });
   const [fechaHora, setFechaHora] = useState(new Date());
-  const [fotoUri, setFotoUri] = useState(null);
+  const [fotos, setFotos] = useState([]);
   const [showPicker, setShowPicker]   = useState(false);
   const [pickerMode, setPickerMode]   = useState('date');
   const [unidades, setUnidades] = useState([]);
@@ -361,17 +360,17 @@ export default function MecanicoForm({ user, showToast }) {
     setStatus('loading');
     setErrorMsg('');
     try {
-      const urlFoto = fotoUri ? await subirFoto(fotoUri) : undefined;
+      const urls = await subirFotos(fotos);
       await crearSolicitud({
         fechaHora: fechaHora.toISOString(),
         tipoUnidad, numeroEconomico, descripcionServicio, costoEstimado,
         ...(esCamion ? { odometro } : {}),
-        ...(urlFoto ? { urlFoto } : {}),
+        fotos: urls,
       });
       setForm({ tipoUnidad: '', numeroEconomico: '',
                 descripcionServicio: '', costoEstimado: '', odometro: '' });
       setFechaHora(new Date());
-      setFotoUri(null);
+      setFotos([]);
       setUnidades([]);
       setStatus(null);
       setRefreshKey((k) => k + 1);
@@ -476,8 +475,8 @@ export default function MecanicoForm({ user, showToast }) {
       </View>
 
       <View style={styles.fieldWrap}>
-        <Text style={styles.label}>Fotografía</Text>
-        <FotoPicker uri={fotoUri} onChange={setFotoUri} disabled={status === 'loading'} />
+        <Text style={styles.label}>Fotografías (máx. 7)</Text>
+        <FotoPicker fotos={fotos} onChange={setFotos} disabled={status === 'loading'} />
       </View>
 
       {status === 'error' && (

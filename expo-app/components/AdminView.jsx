@@ -110,20 +110,20 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
         </View>
       )}
 
-      {(item.urlfoto || item.urlcierre) && (
+      {item.fotos?.length > 0 && (
         <View style={styles.fotosBlock}>
-          {item.urlfoto && (
-            <View style={styles.fotoCol}>
-              <Text style={styles.campoLabel}>Solicitud</Text>
-              <FotoThumb url={item.urlfoto} />
-            </View>
-          )}
-          {item.urlcierre && (
-            <View style={styles.fotoCol}>
-              <Text style={styles.campoLabel}>Cierre</Text>
-              <FotoThumb url={item.urlcierre} />
-            </View>
-          )}
+          {['Apertura', 'Cierre'].map((tipo) => {
+            const fs = item.fotos.filter((f) => f.tipo === tipo);
+            if (fs.length === 0) return null;
+            return (
+              <View key={tipo} style={styles.fotoCol}>
+                <Text style={styles.campoLabel}>{tipo}</Text>
+                <View style={styles.fotosRowAdmin}>
+                  {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={48} />)}
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -330,8 +330,9 @@ const styles = StyleSheet.create({
   campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
 
   // Fotos
-  fotosBlock: { flexDirection: 'row', gap: 16, marginTop: 8, marginBottom: 4 },
+  fotosBlock: { gap: 10, marginTop: 8, marginBottom: 4 },
   fotoCol: { gap: 4 },
+  fotosRowAdmin: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
   // Acciones
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12 },
