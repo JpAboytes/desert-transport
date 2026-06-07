@@ -35,6 +35,22 @@ export const actualizarEstatus = async (id, estatus) => {
   return api.patch(`/admin/solicitudes/${id}`, { estatus });
 };
 
+export const getPresignUrl = async (contentType = 'image/jpeg') => {
+  const api = await authAxios();
+  return api.post('/uploads/presign', { contentType });
+};
+
+export const cerrarReparacion = async (id, { costoReal, urlCierre }) => {
+  const api = await authAxios();
+  return api.patch(`/mis-solicitudes/${id}`, { costoReal, urlCierre });
+};
+
+// Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).
+export const autorizarPago = async (id, autorizacionPago) => {
+  const api = await authAxios();
+  return api.patch(`/admin/solicitudes/${id}`, { autorizacionPago });
+};
+
 export const registerPushToken = async (expoPushToken) => {
   const api = await authAxios();
   return api.put('/push-token', { expoPushToken });

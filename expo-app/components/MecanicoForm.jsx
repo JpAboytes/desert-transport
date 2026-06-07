@@ -4,7 +4,10 @@ import {
   ScrollView, Modal, FlatList, ActivityIndicator, Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getUnidades, crearSolicitud, getMisSolicitudes } from '../services/solicitudes';
+import { getUnidades, crearSolicitud, getMisSolicitudes, cerrarReparacion } from '../services/solicitudes';
+import { subirFoto } from '../services/uploads';
+import FotoPicker from './FotoPicker';
+import FotoThumb from './FotoThumb';
 
 const INK        = '#0a0a0a';
 const INK_MID    = '#444444';
@@ -19,12 +22,33 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
-const FILTROS      = ['Todos', 'Pendiente', 'Autorizado', 'Rechazado'];
+const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+
+const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
 function formatFecha(raw) {
   if (!raw) return '—';
   return new Date(raw).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
 }
+
+const estatusStyleOf = (estatus) => ({
+  Pendiente:        styles.estatusPendiente,
+  'En proceso':     styles.estatusProceso,
+  Reparado:         styles.estatusReparado,
+  Pagado:           styles.estatusPagado,
+  Rechazado:        styles.estatusRechazado,
+  'Pago rechazado': styles.estatusRechazado,
+}[estatus] ?? {});
+
+// Estatus para mostrar: el pago se deriva del booleano autorizacionpago
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+const displayEstatus = (s) => {
+  if (s.estatus === 'Reparado') {
+    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 0) return 'Pago rechazado';
+  }
+  return s.estatus;
+};
 
 // ── Select modal B&W ─────────────────────────────────────────
 function CustomSelect({ value, options, onChange, placeholder, disabled }) {
@@ -82,17 +106,11 @@ function MisSolicitudes({ refreshKey }) {
 
   useEffect(() => { cargar(); }, [cargar, refreshKey]);
 
-  const estatusStyle = (estatus) => ({
-    Pendiente:  styles.estatusPendiente,
-    Autorizado: styles.estatusAutorizado,
-    Rechazado:  styles.estatusRechazado,
-  }[estatus] ?? {});
-
   if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
 
-  // Más reciente primero (por id) + filtro por estatus
+  // Más reciente primero (por id) + filtro por estatus (derivado para el pago)
   const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
-  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => s.estatus === filtro);
+  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => displayEstatus(s) === filtro);
 
   return (
     <>
@@ -118,8 +136,8 @@ function MisSolicitudes({ refreshKey }) {
         <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
-            <View style={[styles.estatusBadge, estatusStyle(s.estatus)]}>
-              <Text style={[styles.estatusText, estatusStyle(s.estatus)]}>{s.estatus.toUpperCase()}</Text>
+            <View style={[styles.estatusBadge, estatusStyleOf(displayEstatus(s))]}>
+              <Text style={[styles.estatusText, estatusStyleOf(displayEstatus(s))]}>{displayEstatus(s).toUpperCase()}</Text>
             </View>
           </View>
           <Text style={styles.solicitudMeta}>
@@ -136,22 +154,141 @@ function MisSolicitudes({ refreshKey }) {
             <Text style={styles.campoValor}>{s.descripcion}</Text>
           </View>
           <View style={styles.campo}>
-            <Text style={styles.campoLabel}>Costo  </Text>
-            <Text style={styles.campoValor}>
-              ${Number(s.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            </Text>
+            <Text style={styles.campoLabel}>Costo estimado  </Text>
+            <Text style={styles.campoValor}>{money(s.costo)}</Text>
           </View>
+          {s.costoreal != null && (
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>Costo real  </Text>
+              <Text style={styles.campoValor}>{money(s.costoreal)}</Text>
+            </View>
+          )}
           {s.nombreaprobador && (
             <View style={styles.campo}>
               <Text style={styles.campoLabel}>
-                {s.estatus === 'Autorizado' ? 'Autorizado por  ' : 'Rechazado por  '}
+                {s.estatus === 'Rechazado' ? 'Rechazado por  ' : 'Autorizado por  '}
               </Text>
               <Text style={styles.campoValor}>{s.nombreaprobador}</Text>
+            </View>
+          )}
+          {(s.urlfoto || s.urlcierre) && (
+            <View style={styles.fotosRow}>
+              {s.urlfoto && <FotoThumb url={s.urlfoto} />}
+              {s.urlcierre && <FotoThumb url={s.urlcierre} />}
             </View>
           )}
         </View>
       ))}
     </>
+  );
+}
+
+// ── Reparaciones en proceso (el mecánico cierra el ticket) ─────
+function ReparacionesEnProceso({ refreshKey, showToast }) {
+  const [lista, setLista] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [localKey, setLocalKey] = useState(0);
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await getMisSolicitudes();
+      setLista((data.data ?? []).filter((s) => s.estatus === 'En proceso'));
+    } catch {
+      setLista([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar, refreshKey, localKey]);
+
+  if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
+
+  if (lista.length === 0) {
+    return <Text style={styles.emptyText}>No tienes reparaciones en proceso.</Text>;
+  }
+
+  const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
+
+  return (
+    <>
+      {ordenadas.map((s, i) => (
+        <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
+          <View style={styles.solicitudHeader}>
+            <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
+            <View style={[styles.estatusBadge, estatusStyleOf(s.estatus)]}>
+              <Text style={[styles.estatusText, estatusStyleOf(s.estatus)]}>{s.estatus.toUpperCase()}</Text>
+            </View>
+          </View>
+          <Text style={styles.solicitudMeta}>
+            {s.tunidad} · {s.numeconomico} · {formatFecha(s.fechahora)}
+          </Text>
+          <View style={styles.campo}>
+            <Text style={styles.campoLabel}>Descripción  </Text>
+            <Text style={styles.campoValor}>{s.descripcion}</Text>
+          </View>
+          <View style={styles.campo}>
+            <Text style={styles.campoLabel}>Costo estimado  </Text>
+            <Text style={styles.campoValor}>{money(s.costo)}</Text>
+          </View>
+          <CerrarTicketForm solicitud={s} showToast={showToast} onClosed={() => setLocalKey((k) => k + 1)} />
+        </View>
+      ))}
+    </>
+  );
+}
+
+// ── Formulario de cierre de un ticket ─────────────────────────
+function CerrarTicketForm({ solicitud, showToast, onClosed }) {
+  const [costoReal, setCostoReal] = useState('');
+  const [fotoUri, setFotoUri] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    const costo = parseFloat(costoReal);
+    if (costoReal === '' || isNaN(costo) || costo < 0) {
+      showToast?.('Ingresa un costo real válido', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const urlCierre = fotoUri ? await subirFoto(fotoUri) : undefined;
+      await cerrarReparacion(solicitud.idserviciomovil, { costoReal, urlCierre });
+      showToast?.(`Reparación #${String(solicitud.idserviciomovil).padStart(4, '0')} cerrada`);
+      onClosed?.();
+    } catch {
+      showToast?.('Error al cerrar la reparación', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.cierreBox}>
+      <Text style={styles.label}>Costo real ($)</Text>
+      <TextInput
+        style={styles.input}
+        value={costoReal}
+        onChangeText={setCostoReal}
+        placeholder="0.00"
+        placeholderTextColor={INK_LIGHT}
+        keyboardType="decimal-pad"
+      />
+      <Text style={[styles.label, { marginTop: 12 }]}>Fotografía del cierre</Text>
+      <FotoPicker uri={fotoUri} onChange={setFotoUri} disabled={loading} />
+      <TouchableOpacity
+        style={[styles.btn, { marginTop: 12 }, loading && { backgroundColor: INK_LIGHT }]}
+        onPress={submit}
+        disabled={loading}
+        activeOpacity={0.7}
+      >
+        {loading
+          ? <ActivityIndicator color={PAPER} />
+          : <Text style={styles.btnText}>Marcar como reparado</Text>
+        }
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -162,6 +299,7 @@ export default function MecanicoForm({ user, showToast }) {
     descripcionServicio: '', costoEstimado: '', odometro: '',
   });
   const [fechaHora, setFechaHora] = useState(new Date());
+  const [fotoUri, setFotoUri] = useState(null);
   const [showPicker, setShowPicker]   = useState(false);
   const [pickerMode, setPickerMode]   = useState('date');
   const [unidades, setUnidades] = useState([]);
@@ -223,14 +361,17 @@ export default function MecanicoForm({ user, showToast }) {
     setStatus('loading');
     setErrorMsg('');
     try {
+      const urlFoto = fotoUri ? await subirFoto(fotoUri) : undefined;
       await crearSolicitud({
         fechaHora: fechaHora.toISOString(),
         tipoUnidad, numeroEconomico, descripcionServicio, costoEstimado,
         ...(esCamion ? { odometro } : {}),
+        ...(urlFoto ? { urlFoto } : {}),
       });
       setForm({ tipoUnidad: '', numeroEconomico: '',
                 descripcionServicio: '', costoEstimado: '', odometro: '' });
       setFechaHora(new Date());
+      setFotoUri(null);
       setUnidades([]);
       setStatus(null);
       setRefreshKey((k) => k + 1);
@@ -252,7 +393,13 @@ export default function MecanicoForm({ user, showToast }) {
           style={[styles.segment, tab === 'crear' && styles.segmentActive]}
           onPress={() => setTab('crear')} activeOpacity={0.7}
         >
-          <Text style={[styles.segmentText, tab === 'crear' && styles.segmentTextActive]}>Crear solicitud</Text>
+          <Text style={[styles.segmentText, tab === 'crear' && styles.segmentTextActive]}>Crear</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, styles.segmentRight, tab === 'proceso' && styles.segmentActive]}
+          onPress={() => setTab('proceso')} activeOpacity={0.7}
+        >
+          <Text style={[styles.segmentText, tab === 'proceso' && styles.segmentTextActive]}>En proceso</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.segment, styles.segmentRight, tab === 'mis' && styles.segmentActive]}
@@ -330,9 +477,7 @@ export default function MecanicoForm({ user, showToast }) {
 
       <View style={styles.fieldWrap}>
         <Text style={styles.label}>Fotografía</Text>
-        <View style={styles.photoPlaceholder}>
-          <Text style={styles.photoPlaceholderText}>Próximamente disponible</Text>
-        </View>
+        <FotoPicker uri={fotoUri} onChange={setFotoUri} disabled={status === 'loading'} />
       </View>
 
       {status === 'error' && (
@@ -352,6 +497,10 @@ export default function MecanicoForm({ user, showToast }) {
       </TouchableOpacity>
 
       </>
+      ) : tab === 'proceso' ? (
+      <View style={styles.misSolicitudesSection}>
+        <ReparacionesEnProceso refreshKey={refreshKey} showToast={showToast} />
+      </View>
       ) : (
       <View style={styles.misSolicitudesSection}>
         <MisSolicitudes refreshKey={refreshKey} />
@@ -417,7 +566,7 @@ const styles = StyleSheet.create({
   emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
 
   // Filtros por estatus
-  filtros:        { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: INK, marginBottom: 8 },
+  filtros:        { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: INK, marginBottom: 8 },
   filtroBtn:      { paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center' },
   filtroBtnText:  { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
   filtroBtnActive:{ color: INK },
@@ -432,10 +581,18 @@ const styles = StyleSheet.create({
   estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   estatusText:  { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700' },
   estatusPendiente:  { borderColor: INK_MID, color: INK_MID },
-  estatusAutorizado: { borderColor: INK, color: INK },
+  estatusProceso:    { borderColor: INK, color: INK },
+  estatusReparado:   { borderColor: INK, color: INK },
+  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
   estatusRechazado:  { borderColor: INK_LIGHT, color: INK_LIGHT },
 
   campo:      { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 3 },
   campoLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
   campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
+
+  // Formulario de cierre de ticket
+  cierreBox: { marginTop: 14, borderTopWidth: 1, borderTopColor: RULE, paddingTop: 14 },
+
+  // Miniaturas de fotos
+  fotosRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
 });

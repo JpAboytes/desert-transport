@@ -3,7 +3,8 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   FlatList, ActivityIndicator, Platform,
 } from 'react-native';
-import { getSolicitudes, actualizarEstatus } from '../services/solicitudes';
+import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/solicitudes';
+import FotoThumb from './FotoThumb';
 
 const INK        = '#0a0a0a';
 const INK_MID    = '#444444';
@@ -16,7 +17,19 @@ const sans = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
 const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-const FILTROS = ['Todos', 'Pendiente', 'Autorizado', 'Rechazado'];
+const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+
+const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+
+// Estatus para mostrar: el pago se deriva del booleano autorizacionpago
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+const displayEstatus = (s) => {
+  if (s.estatus === 'Reparado') {
+    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 0) return 'Pago rechazado';
+  }
+  return s.estatus;
+};
 
 function formatFecha(raw) {
   if (!raw) return '—';
@@ -24,32 +37,48 @@ function formatFecha(raw) {
   return d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function SolicitudItem({ item, onActualizar, onToast }) {
+function SolicitudItem({ item, onActualizar, onPago, onToast }) {
   const [loading, setLoading] = useState(null);
+  const est = displayEstatus(item);
 
-  const handleEstatus = async (estatus) => {
+  const handleEstatus = async (estatus, etiqueta) => {
     setLoading(estatus);
     try {
       await onActualizar(item.idserviciomovil, estatus);
-      onToast?.(`Solicitud #${String(item.idserviciomovil).padStart(4,'0')} ${estatus.toLowerCase()}`);
+      onToast?.(`Solicitud #${String(item.idserviciomovil).padStart(4,'0')} ${etiqueta}`);
     } catch {
       onToast?.('Error al actualizar la solicitud', 'error');
     }
     setLoading(null);
   };
 
+  const handlePago = async (aprobado) => {
+    const key = aprobado ? 'pago-si' : 'pago-no';
+    setLoading(key);
+    try {
+      await onPago(item.idserviciomovil, aprobado);
+      onToast?.(`Pago de #${String(item.idserviciomovil).padStart(4,'0')} ${aprobado ? 'autorizado' : 'rechazado'}`);
+    } catch {
+      onToast?.('Error al registrar el pago', 'error');
+    }
+    setLoading(null);
+  };
+
   const estatusStyle = {
-    Pendiente:  styles.estatusPendiente,
-    Autorizado: styles.estatusAutorizado,
-    Rechazado:  styles.estatusRechazado,
-  }[item.estatus] ?? {};
+    Pendiente:         styles.estatusPendiente,
+    'En proceso':      styles.estatusProceso,
+    Reparado:          styles.estatusReparado,
+    Pagado:            styles.estatusPagado,
+    Rechazado:         styles.estatusRechazado,
+    'Pago rechazado':  styles.estatusRechazado,
+  }[est] ?? {};
 
   return (
     <View style={styles.item}>
       <View style={styles.itemHeader}>
         <Text style={styles.itemId}>#{String(item.idserviciomovil).padStart(4, '0')}</Text>
         <View style={[styles.estatusBadge, estatusStyle]}>
-          <Text style={[styles.estatusText, estatusStyle]}>{item.estatus.toUpperCase()}</Text>
+          <Text style={[styles.estatusText, estatusStyle]}>{est.toUpperCase()}</Text>
         </View>
       </View>
 
@@ -71,15 +100,37 @@ function SolicitudItem({ item, onActualizar, onToast }) {
 
       <View style={styles.campo}>
         <Text style={styles.campoLabel}>Costo estimado  </Text>
-        <Text style={styles.campoValor}>
-          ${Number(item.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-        </Text>
+        <Text style={styles.campoValor}>{money(item.costo)}</Text>
       </View>
+
+      {item.costoreal != null && (
+        <View style={styles.campo}>
+          <Text style={styles.campoLabel}>Costo real  </Text>
+          <Text style={styles.campoValor}>{money(item.costoreal)}</Text>
+        </View>
+      )}
+
+      {(item.urlfoto || item.urlcierre) && (
+        <View style={styles.fotosBlock}>
+          {item.urlfoto && (
+            <View style={styles.fotoCol}>
+              <Text style={styles.campoLabel}>Solicitud</Text>
+              <FotoThumb url={item.urlfoto} />
+            </View>
+          )}
+          {item.urlcierre && (
+            <View style={styles.fotoCol}>
+              <Text style={styles.campoLabel}>Cierre</Text>
+              <FotoThumb url={item.urlcierre} />
+            </View>
+          )}
+        </View>
+      )}
 
       {item.nombreaprobador && (
         <View style={styles.campo}>
           <Text style={styles.campoLabel}>
-            {item.estatus === 'Autorizado' ? 'Autorizado por  ' : 'Rechazado por  '}
+            {item.estatus === 'Rechazado' ? 'Rechazado por  ' : 'Autorizado por  '}
           </Text>
           <Text style={styles.campoValor}>{item.nombreaprobador}</Text>
         </View>
@@ -89,11 +140,11 @@ function SolicitudItem({ item, onActualizar, onToast }) {
         <View style={styles.acciones}>
           <TouchableOpacity
             style={[styles.btnAccion, styles.btnAprobar, loading && { opacity: 0.4 }]}
-            onPress={() => handleEstatus('Autorizado')}
+            onPress={() => handleEstatus('En proceso', 'autorizada')}
             disabled={!!loading}
             activeOpacity={0.7}
           >
-            {loading === 'Autorizado'
+            {loading === 'En proceso'
               ? <ActivityIndicator color={PAPER} size="small" />
               : <Text style={styles.btnAprobarText}>Aprobar</Text>
             }
@@ -101,13 +152,41 @@ function SolicitudItem({ item, onActualizar, onToast }) {
 
           <TouchableOpacity
             style={[styles.btnAccion, styles.btnRechazar, loading && { opacity: 0.4 }]}
-            onPress={() => handleEstatus('Rechazado')}
+            onPress={() => handleEstatus('Rechazado', 'rechazada')}
             disabled={!!loading}
             activeOpacity={0.7}
           >
             {loading === 'Rechazado'
               ? <ActivityIndicator color={INK} size="small" />
               : <Text style={styles.btnRechazarText}>Rechazar</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {est === 'Reparado' && (
+        <View style={styles.acciones}>
+          <TouchableOpacity
+            style={[styles.btnAccion, styles.btnAprobar, loading && { opacity: 0.4 }]}
+            onPress={() => handlePago(true)}
+            disabled={!!loading}
+            activeOpacity={0.7}
+          >
+            {loading === 'pago-si'
+              ? <ActivityIndicator color={PAPER} size="small" />
+              : <Text style={styles.btnAprobarText}>Autorizar pago</Text>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btnAccion, styles.btnRechazar, loading && { opacity: 0.4 }]}
+            onPress={() => handlePago(false)}
+            disabled={!!loading}
+            activeOpacity={0.7}
+          >
+            {loading === 'pago-no'
+              ? <ActivityIndicator color={INK} size="small" />
+              : <Text style={styles.btnRechazarText}>Rechazar pago</Text>
             }
           </TouchableOpacity>
         </View>
@@ -144,9 +223,16 @@ export default function AdminView({ showToast }) {
     );
   };
 
+  const handlePago = async (id, aprobado) => {
+    await autorizarPago(id, aprobado);
+    setSolicitudes((prev) =>
+      prev.map((s) => s.idserviciomovil === id ? { ...s, autorizacionpago: aprobado ? 1 : 0 } : s)
+    );
+  };
+
   const lista = filtro === 'Todos'
     ? solicitudes
-    : solicitudes.filter((s) => s.estatus === filtro);
+    : solicitudes.filter((s) => displayEstatus(s) === filtro);
 
   return (
     <View style={styles.container}>
@@ -181,7 +267,7 @@ export default function AdminView({ showToast }) {
         data={lista}
         keyExtractor={(item) => String(item.idserviciomovil)}
         renderItem={({ item }) => (
-          <SolicitudItem item={item} onActualizar={handleActualizar} onToast={showToast} />
+          <SolicitudItem item={item} onActualizar={handleActualizar} onPago={handlePago} onToast={showToast} />
         )}
         scrollEnabled={false}
       />
@@ -195,6 +281,7 @@ const styles = StyleSheet.create({
   // Filtros
   filtros: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderBottomWidth: 1,
     borderBottomColor: INK,
     marginBottom: 8,
@@ -225,7 +312,9 @@ const styles = StyleSheet.create({
     fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700',
   },
   estatusPendiente:  { borderColor: INK_MID, color: INK_MID },
-  estatusAutorizado: { borderColor: INK, color: INK },
+  estatusProceso:    { borderColor: INK, color: INK },
+  estatusReparado:   { borderColor: INK, color: INK },
+  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
   estatusRechazado:  { borderColor: INK_LIGHT, color: INK_LIGHT },
 
   itemMeta: {
@@ -239,6 +328,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', fontWeight: '700', color: INK_MID,
   },
   campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
+
+  // Fotos
+  fotosBlock: { flexDirection: 'row', gap: 16, marginTop: 8, marginBottom: 4 },
+  fotoCol: { gap: 4 },
 
   // Acciones
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12 },

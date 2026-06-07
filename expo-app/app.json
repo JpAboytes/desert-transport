@@ -29,6 +29,13 @@
         {
           "color": "#0a0a0a"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app usa tus fotos para adjuntar evidencia de la reparación.",
+          "cameraPermission": "La app usa la cámara para tomar fotos de la reparación."
+        }
       ]
     ],
     "extra": {

@@ -489,9 +489,70 @@ body {
   border: 1px solid currentColor;
 }
 
-.solicitud__estatus--pendiente  { color: var(--ink-mid); }
-.solicitud__estatus--autorizado { color: var(--ink); }
-.solicitud__estatus--rechazado  { color: var(--ink-light); }
+.cierre-form {
+  margin-top: 1rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+}
+
+/* ── Fotos ── */
+.solicitud__fotos { display: flex; gap: 1rem; margin-top: 0.5rem; }
+.solicitud__foto-col { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.foto-thumb {
+  object-fit: cover;
+  border: 1px solid var(--ink);
+  background: #eee;
+  cursor: pointer;
+}
+
+.foto-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+.foto-modal__img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* Selector de foto */
+.foto-picker__btn {
+  display: inline-block;
+  border: 1px solid var(--ink);
+  padding: 0.7rem 1rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: var(--paper);
+}
+.foto-picker__btn.is-disabled { opacity: 0.4; pointer-events: none; }
+.foto-picker__preview { border: 1px solid var(--rule); padding: 0.5rem; }
+.foto-picker__preview img { display: block; max-width: 100%; max-height: 200px; object-fit: contain; }
+.foto-picker__remove {
+  margin-top: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--ink-light);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.solicitud__estatus--pendiente       { color: var(--ink-mid); }
+.solicitud__estatus--autorizado      { color: var(--ink); }
+.solicitud__estatus--en-proceso      { color: var(--ink); }
+.solicitud__estatus--reparado        { color: var(--ink); }
+.solicitud__estatus--pagado          { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.solicitud__estatus--rechazado       { color: var(--ink-light); }
+.solicitud__estatus--pago-rechazado  { color: var(--ink-light); }
 
 .solicitud__meta {
   font-family: 'Helvetica Neue', Arial, sans-serif;

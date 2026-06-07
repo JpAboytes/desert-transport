@@ -34,7 +34,8 @@ export default function HomeScreen() {
       const decoded = decodeToken(token);
       if (!decoded) { router.replace('/'); return; }
       setUser(decoded);
-      if (decoded.tusuario === 'Mantenimiento') {
+      // Mecánicos: avisos de autorización/pago. Administradores: aviso de cierre de reparación.
+      if (decoded.tusuario === 'Mantenimiento' || decoded.tusuario === 'Administrador') {
         await registerForNotifications();
       }
     });

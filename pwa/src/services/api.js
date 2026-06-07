@@ -23,6 +23,16 @@ export const crearSolicitud = (data) =>
 export const getMisSolicitudes = () =>
   api.get('/mis-solicitudes');
 
+export const cerrarReparacion = (id, { costoReal, urlCierre }) =>
+  api.patch(`/mis-solicitudes/${id}`, { costoReal, urlCierre });
+
+export const getPresignUrl = (contentType = 'image/jpeg') =>
+  api.post('/uploads/presign', { contentType });
+
+// Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).
+export const autorizarPago = (id, autorizacionPago) =>
+  api.patch(`/admin/solicitudes/${id}`, { autorizacionPago });
+
 export const getSolicitudes = () =>
   api.get('/admin/solicitudes');
 
