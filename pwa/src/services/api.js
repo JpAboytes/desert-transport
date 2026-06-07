@@ -29,6 +29,9 @@ export const cerrarReparacion = (id, { costoReal, urlCierre }) =>
 export const getPresignUrl = (contentType = 'image/jpeg') =>
   api.post('/uploads/presign', { contentType });
 
+export const suscribirPush = (subscription) =>
+  api.post('/push/subscribe', subscription);
+
 // Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).
 export const autorizarPago = (id, autorizacionPago) =>
   api.patch(`/admin/solicitudes/${id}`, { autorizacionPago });

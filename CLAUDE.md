@@ -66,6 +66,7 @@ La UI bifurca por rol en `expo-app/app/home.jsx`. El lambda `admin` rechaza (403
 | PATCH | `/mis-solicitudes/{id}` | `lambda/solicitudes` | JWT (dueño) | Cierra reparación: `{ costoReal, urlCierre? }` → `Reparado`. |
 | PUT | `/push-token` | `lambda/solicitudes` | JWT | Guarda `usuario.push_token`. |
 | POST | `/uploads/presign` | `lambda/solicitudes` | JWT | Devuelve `{ uploadUrl, fileUrl }` para subir una foto a S3 (presigned PUT). |
+| POST | `/push/subscribe` | `lambda/solicitudes` | JWT | Guarda (upsert) la suscripción Web Push del PWA en `push_subscriptions`. |
 | GET | `/admin/solicitudes` | `lambda/admin` | JWT admin | Todas las solicitudes. |
 | PATCH | `/admin/solicitudes/{id}` | `lambda/admin` | JWT admin | Solicitud: `{ estatus: Autorizado\|Rechazado }`. Pago: `{ autorizacionPago: true\|false }` (sobre ticket `Reparado`). |
 
@@ -83,6 +84,8 @@ vivas son las de las subcarpetas. Confirmar en API Gateway antes de tocarlo.
   (las llena el mecánico al cerrar), y `autorizacionpago` TINYINT(1) NULL (decisión de pago del admin:
   NULL=pendiente, 1=autorizado, 0=rechazado). `urlfoto` guarda la foto de la solicitud (en S3).
 - **`camion`**: `IdCamion`, `NombreC`. — **`cajas`** (remolques): `idcaja`, `Numero`.
+- **`push_subscriptions`**: `id`, `idusuario`, `endpoint` (UNIQUE), `p256dh`, `auth` — suscripciones
+  Web Push del PWA (admins).
 - **`servicioc`** / **`serviciocajas`**: servicio detallado creado en la **primera** autorización;
   guardan `PO_camiones` / `PO_remolques` con formato `"{idServicio}-{PO}-{numeconomico}"`.
 
@@ -119,7 +122,13 @@ La decisión de pago (`{ autorizacionPago }`) es una rama aparte: valida que el 
 - Expo Push. Canal Android `solicitudes`. Token registrado vía `PUT /push-token`.
 - EAS `projectId`: `24ceda7b-3d14-49c6-938c-a3f2d74e46e9` (en `expo-app/app.json`).
 - Se registran notificaciones para `Mantenimiento` **y** `Administrador` (ver `home.jsx`): el admin
-  necesita push_token para recibir el aviso de cierre del mecánico. La **PWA no registra push**.
+  necesita push_token para recibir el aviso de cierre del mecánico.
+- **Web Push en el PWA (admin)**: canal paralelo a Expo. El admin activa notificaciones (botón en
+  `AdminView`), el PWA registra `public/sw.js`, se suscribe con la clave VAPID pública
+  (`VITE_VAPID_PUBLIC`) y guarda la suscripción vía `POST /push/subscribe` en la tabla
+  `push_subscriptions`. Al cerrar un ticket, el lambda solicitudes envía con `web-push` (claves VAPID
+  en env `VAPID_PUBLIC`/`VAPID_PRIVATE`/`VAPID_SUBJECT`); si una suscripción da 404/410 se borra.
+  **iOS**: solo funciona con el PWA instalado en pantalla de inicio (iOS 16.4+). Hosting: Vercel.
 
 ## Convenciones
 

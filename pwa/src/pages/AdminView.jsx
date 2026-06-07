@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/api';
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
+import BotonNotificaciones from '../components/BotonNotificaciones';
 import { useToast } from '../hooks/useToast';
 
 const ESTATUS_LABEL = {
@@ -209,6 +210,8 @@ export default function AdminView() {
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onDismiss={hideToast} />
+
+      <BotonNotificaciones showToast={showToast} />
 
       {/* Barra de filtros */}
       <div className="admin-filtros">
