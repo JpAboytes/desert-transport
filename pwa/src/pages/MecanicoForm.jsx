@@ -9,7 +9,7 @@ import { useToast } from '../hooks/useToast';
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
 const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
-const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
+const FILTROS_FECHA = ['Todo', 'Hoy', 'Últimos 7 días', 'Últimos 30 días'];
 
 const estatusSlug = (e) => e.toLowerCase().replace(/\s+/g, '-');
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
@@ -20,7 +20,7 @@ function dentroDeRango(raw, rango) {
   if (!raw) return false;
   const f = new Date(raw);
   if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
-  const dias = rango === '7 días' ? 7 : 30;
+  const dias = rango === 'Últimos 7 días' ? 7 : 30;
   const limite = new Date();
   limite.setDate(limite.getDate() - dias);
   return f >= limite;

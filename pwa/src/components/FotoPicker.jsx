@@ -28,18 +28,33 @@ export default function FotoPicker({ fotos = [], onChange, disabled, max = 7 }) 
       )}
 
       {restantes > 0 && (
-        <label className={`foto-picker__btn${disabled ? ' is-disabled' : ''}`}>
-          Agregar foto
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            hidden
-            disabled={disabled}
-            onChange={agregar}
-          />
-        </label>
+        <div className="foto-picker__acciones">
+          {/* Cámara: `capture` abre la cámara directo en móvil */}
+          <label className={`foto-picker__btn${disabled ? ' is-disabled' : ''}`}>
+            Cámara
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              hidden
+              disabled={disabled}
+              onChange={agregar}
+            />
+          </label>
+          {/* Galería: sin `capture` → abre la galería / selector de archivos */}
+          <label className={`foto-picker__btn${disabled ? ' is-disabled' : ''}`}>
+            Galería
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              disabled={disabled}
+              onChange={agregar}
+            />
+          </label>
+        </div>
       )}
       <span className="foto-picker__contador">{fotos.length}/{max} fotos</span>
     </div>
