@@ -9,9 +9,40 @@ import { useToast } from '../hooks/useToast';
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
 const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 
 const estatusSlug = (e) => e.toLowerCase().replace(/\s+/g, '-');
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+
+// Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
+function dentroDeRango(raw, rango) {
+  if (rango === 'Todo') return true;
+  if (!raw) return false;
+  const f = new Date(raw);
+  if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
+  const dias = rango === '7 días' ? 7 : 30;
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  return f >= limite;
+}
+
+// Bloque de fotos colapsable: oculto por defecto, se muestra con un botón.
+function FotosColapsables({ fotos }) {
+  const [abierto, setAbierto] = useState(false);
+  if (!fotos?.length) return null;
+  return (
+    <div className="fotos-colapsables">
+      <button type="button" className="fotos-toggle" onClick={() => setAbierto((a) => !a)}>
+        {abierto ? 'Ocultar imágenes' : `Ver imágenes (${fotos.length})`}
+      </button>
+      {abierto && (
+        <div className="solicitud__fotos">
+          {fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
 // (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
@@ -32,6 +63,7 @@ function MisSolicitudes({ refreshKey }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('Todos');
+  const [filtroFecha, setFiltroFecha] = useState('Todo');
 
   useEffect(() => {
     setLoading(true);
@@ -43,28 +75,36 @@ function MisSolicitudes({ refreshKey }) {
 
   if (loading) return <p className="admin-estado">Cargando solicitudes...</p>;
 
-  // Más reciente primero (por id) + filtro por estatus (derivado para el pago)
+  // Más reciente primero (por id) + filtros por estatus (derivado para el pago) y fecha
   const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
-  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => displayEstatus(s) === filtro);
+  const visibles = ordenadas.filter((s) =>
+    (filtro === 'Todos' || displayEstatus(s) === filtro) &&
+    dentroDeRango(s.fechahora, filtroFecha)
+  );
 
   return (
     <>
-      {/* Filtros por estatus */}
-      <div className="admin-filtros">
-        {FILTROS.map((f) => (
-          <button key={f}
-            className={`filtro-btn${filtro === f ? ' filtro-btn--active' : ''}`}
-            onClick={() => setFiltro(f)}>
-            {f}
-          </button>
-        ))}
+      {/* Filtros (estatus + fecha) */}
+      <div className="filtros-select">
+        <label className="filtros-select__group">
+          <span className="filtros-select__label">Estatus</span>
+          <select className="form-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+            {FILTROS.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </label>
+        <label className="filtros-select__group">
+          <span className="filtros-select__label">Fecha</span>
+          <select className="form-select" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}>
+            {FILTROS_FECHA.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </label>
       </div>
 
       {visibles.length === 0 && (
         <p className="admin-estado">
           {lista.length === 0
             ? 'Aún no tienes solicitudes registradas.'
-            : `Sin solicitudes con estatus "${filtro}".`}
+            : 'Sin solicitudes con los filtros seleccionados.'}
         </p>
       )}
 
@@ -108,11 +148,7 @@ function MisSolicitudes({ refreshKey }) {
               {s.nombreaprobador}
             </div>
           )}
-          {s.fotos?.length > 0 && (
-            <div className="solicitud__fotos">
-              {s.fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
-            </div>
-          )}
+          <FotosColapsables fotos={s.fotos} />
         </div>
         ))}
       </div>

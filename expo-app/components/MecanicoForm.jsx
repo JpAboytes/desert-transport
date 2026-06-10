@@ -23,12 +23,60 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
 const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
 function formatFecha(raw) {
   if (!raw) return '—';
   return new Date(raw).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
+function dentroDeRango(raw, rango) {
+  if (rango === 'Todo') return true;
+  if (!raw) return false;
+  const f = new Date(raw);
+  if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
+  const dias = rango === '7 días' ? 7 : 30;
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  return f >= limite;
+}
+
+// Bloque de fotos colapsable: oculto por defecto, se muestra con un botón.
+function FotosColapsables({ fotos, agrupar = false }) {
+  const [abierto, setAbierto] = useState(false);
+  if (!fotos?.length) return null;
+  return (
+    <View style={{ marginTop: 8 }}>
+      <TouchableOpacity style={styles.fotosToggle} onPress={() => setAbierto((a) => !a)} activeOpacity={0.7}>
+        <Text style={styles.fotosToggleText}>
+          {abierto ? 'Ocultar imágenes' : `Ver imágenes (${fotos.length})`}
+        </Text>
+      </TouchableOpacity>
+      {abierto && (agrupar ? (
+        <View style={styles.fotosBlock}>
+          {['Apertura', 'Cierre'].map((tipo) => {
+            const fs = fotos.filter((f) => f.tipo === tipo);
+            if (fs.length === 0) return null;
+            return (
+              <View key={tipo} style={styles.fotoCol}>
+                <Text style={styles.campoLabel}>{tipo}</Text>
+                <View style={styles.fotosRowAdmin}>
+                  {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={48} />)}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.fotosRow}>
+          {fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 const estatusStyleOf = (estatus) => ({
@@ -91,6 +139,7 @@ function MisSolicitudes({ refreshKey }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('Todos');
+  const [filtroFecha, setFiltroFecha] = useState('Todo');
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -108,27 +157,32 @@ function MisSolicitudes({ refreshKey }) {
 
   if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
 
-  // Más reciente primero (por id) + filtro por estatus (derivado para el pago)
+  // Más reciente primero (por id) + filtros por estatus (derivado para el pago) y fecha
   const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
-  const visibles = filtro === 'Todos' ? ordenadas : ordenadas.filter((s) => displayEstatus(s) === filtro);
+  const visibles = ordenadas.filter((s) =>
+    (filtro === 'Todos' || displayEstatus(s) === filtro) &&
+    dentroDeRango(s.fechahora, filtroFecha)
+  );
 
   return (
     <>
-      {/* Filtros por estatus */}
-      <View style={styles.filtros}>
-        {FILTROS.map((f) => (
-          <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={styles.filtroBtn} activeOpacity={0.7}>
-            <Text style={[styles.filtroBtnText, filtro === f && styles.filtroBtnActive]}>{f}</Text>
-            {filtro === f && <View style={styles.filtroIndicator} />}
-          </TouchableOpacity>
-        ))}
+      {/* Filtros (estatus + fecha) */}
+      <View style={styles.filtroSelects}>
+        <View style={styles.filtroSelectCol}>
+          <Text style={styles.filtroSelectLabel}>Estatus</Text>
+          <CustomSelect value={filtro} options={FILTROS} onChange={setFiltro} placeholder="Todos" />
+        </View>
+        <View style={styles.filtroSelectCol}>
+          <Text style={styles.filtroSelectLabel}>Fecha</Text>
+          <CustomSelect value={filtroFecha} options={FILTROS_FECHA} onChange={setFiltroFecha} placeholder="Todo" />
+        </View>
       </View>
 
       {visibles.length === 0 && (
         <Text style={styles.emptyText}>
           {lista.length === 0
             ? 'Aún no tienes solicitudes registradas.'
-            : `Sin solicitudes con estatus "${filtro}".`}
+            : 'Sin solicitudes con los filtros seleccionados.'}
         </Text>
       )}
 
@@ -171,11 +225,7 @@ function MisSolicitudes({ refreshKey }) {
               <Text style={styles.campoValor}>{s.nombreaprobador}</Text>
             </View>
           )}
-          {s.fotos?.length > 0 && (
-            <View style={styles.fotosRow}>
-              {s.fotos.map((f, i) => <FotoThumb key={i} url={f.url} />)}
-            </View>
-          )}
+          <FotosColapsables fotos={s.fotos} />
         </View>
       ))}
     </>
@@ -564,12 +614,17 @@ const styles = StyleSheet.create({
   sectionRule:  { borderTopWidth: 3, borderTopColor: INK, marginTop: 8, marginBottom: 8 },
   emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
 
-  // Filtros por estatus
-  filtros:        { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: INK, marginBottom: 8 },
-  filtroBtn:      { paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center' },
-  filtroBtnText:  { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
-  filtroBtnActive:{ color: INK },
-  filtroIndicator:{ position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, backgroundColor: INK },
+  // Filtros (estatus + fecha) como selects
+  filtroSelects:     { flexDirection: 'row', gap: 12, borderBottomWidth: 1, borderBottomColor: INK, paddingBottom: 14, marginBottom: 14 },
+  filtroSelectCol:   { flex: 1 },
+  filtroSelectLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_LIGHT, marginBottom: 6 },
+
+  // Toggle de fotos
+  fotosToggle:     { alignSelf: 'flex-start', borderWidth: 1, borderColor: INK, paddingHorizontal: 12, paddingVertical: 6 },
+  fotosToggleText: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK },
+  fotosBlock:      { gap: 10, marginTop: 8 },
+  fotoCol:         { gap: 4 },
+  fotosRowAdmin:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
   // Items solicitud
   solicitudItem: { borderBottomWidth: 1, borderBottomColor: INK, paddingVertical: 16 },

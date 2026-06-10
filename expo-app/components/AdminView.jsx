@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, ActivityIndicator, Platform,
+  FlatList, ActivityIndicator, Platform, Modal,
 } from 'react-native';
 import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/solicitudes';
 import FotoThumb from './FotoThumb';
@@ -18,8 +18,21 @@ const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+
+// Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
+function dentroDeRango(raw, rango) {
+  if (rango === 'Todo') return true;
+  if (!raw) return false;
+  const f = new Date(raw);
+  if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
+  const dias = rango === '7 días' ? 7 : 30;
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  return f >= limite;
+}
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
 // (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
@@ -35,6 +48,72 @@ function formatFecha(raw) {
   if (!raw) return '—';
   const d = new Date(raw);
   return d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// ── Select modal B&W (compacto, para filtros) ────────────────
+function CustomSelect({ value, options, onChange, placeholder }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        style={[styles.input, styles.selectTrigger]}
+        onPress={() => setVisible(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.monoText, !value && { color: INK_LIGHT }]} numberOfLines={1}>
+          {value || placeholder}
+        </Text>
+        <Text style={styles.selectCaret}>▾</Text>
+      </TouchableOpacity>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
+          <View style={styles.sheet}>
+            <FlatList
+              data={options}
+              keyExtractor={(item, i) => `${item}-${i}`}
+              ItemSeparatorComponent={() => <View style={styles.sheetDivider} />}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.sheetOption} onPress={() => { onChange(item); setVisible(false); }}>
+                  <Text style={[styles.sheetOptionText, item === value && { fontWeight: '700' }]}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
+}
+
+// Bloque de fotos colapsable (Apertura/Cierre): oculto por defecto.
+function FotosColapsables({ fotos }) {
+  const [abierto, setAbierto] = useState(false);
+  if (!fotos?.length) return null;
+  return (
+    <View style={{ marginTop: 8 }}>
+      <TouchableOpacity style={styles.fotosToggle} onPress={() => setAbierto((a) => !a)} activeOpacity={0.7}>
+        <Text style={styles.fotosToggleText}>
+          {abierto ? 'Ocultar imágenes' : `Ver imágenes (${fotos.length})`}
+        </Text>
+      </TouchableOpacity>
+      {abierto && (
+        <View style={styles.fotosBlock}>
+          {['Apertura', 'Cierre'].map((tipo) => {
+            const fs = fotos.filter((f) => f.tipo === tipo);
+            if (fs.length === 0) return null;
+            return (
+              <View key={tipo} style={styles.fotoCol}>
+                <Text style={styles.campoLabel}>{tipo}</Text>
+                <View style={styles.fotosRowAdmin}>
+                  {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={48} />)}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
 }
 
 function SolicitudItem({ item, onActualizar, onPago, onToast }) {
@@ -110,22 +189,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
         </View>
       )}
 
-      {item.fotos?.length > 0 && (
-        <View style={styles.fotosBlock}>
-          {['Apertura', 'Cierre'].map((tipo) => {
-            const fs = item.fotos.filter((f) => f.tipo === tipo);
-            if (fs.length === 0) return null;
-            return (
-              <View key={tipo} style={styles.fotoCol}>
-                <Text style={styles.campoLabel}>{tipo}</Text>
-                <View style={styles.fotosRowAdmin}>
-                  {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={48} />)}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
+      <FotosColapsables fotos={item.fotos} />
 
       {item.nombreaprobador && (
         <View style={styles.campo}>
@@ -200,6 +264,7 @@ export default function AdminView({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState('Todos');
+  const [filtroFecha, setFiltroFecha] = useState('Todo');
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -230,22 +295,25 @@ export default function AdminView({ showToast }) {
     );
   };
 
-  const lista = filtro === 'Todos'
-    ? solicitudes
-    : solicitudes.filter((s) => displayEstatus(s) === filtro);
+  const lista = solicitudes.filter((s) =>
+    (filtro === 'Todos' || displayEstatus(s) === filtro) &&
+    dentroDeRango(s.fechahora, filtroFecha)
+  );
 
   return (
     <View style={styles.container}>
-      {/* Filtros */}
-      <View style={styles.filtros}>
-        {FILTROS.map((f) => (
-          <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={styles.filtroBtn} activeOpacity={0.7}>
-            <Text style={[styles.filtroBtnText, filtro === f && styles.filtroBtnActive]}>{f}</Text>
-            {filtro === f && <View style={styles.filtroIndicator} />}
-          </TouchableOpacity>
-        ))}
+      {/* Filtros (estatus + fecha) */}
+      <View style={styles.filtroSelects}>
+        <View style={styles.filtroSelectCol}>
+          <Text style={styles.filtroSelectLabel}>Estatus</Text>
+          <CustomSelect value={filtro} options={FILTROS} onChange={setFiltro} placeholder="Todos" />
+        </View>
+        <View style={styles.filtroSelectCol}>
+          <Text style={styles.filtroSelectLabel}>Fecha</Text>
+          <CustomSelect value={filtroFecha} options={FILTROS_FECHA} onChange={setFiltroFecha} placeholder="Todo" />
+        </View>
         <TouchableOpacity onPress={cargar} style={styles.filtroReload} activeOpacity={0.7}>
-          <Text style={styles.filtroBtnText}>↺</Text>
+          <Text style={styles.filtroReloadText}>↺</Text>
         </TouchableOpacity>
       </View>
 
@@ -259,7 +327,7 @@ export default function AdminView({ showToast }) {
 
       {!loading && !error && lista.length === 0 && (
         <Text style={styles.empty}>
-          Sin solicitudes{filtro !== 'Todos' ? ` con estatus "${filtro}"` : ''}.
+          Sin solicitudes con los filtros seleccionados.
         </Text>
       )}
 
@@ -278,25 +346,42 @@ export default function AdminView({ showToast }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Filtros
-  filtros: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderBottomWidth: 1,
-    borderBottomColor: INK,
-    marginBottom: 8,
+  // Filtros (estatus + fecha) como selects
+  filtroSelects: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+    borderBottomWidth: 1, borderBottomColor: INK, paddingBottom: 14, marginBottom: 14,
   },
-  filtroBtn: { paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center' },
-  filtroBtnText: {
+  filtroSelectCol: { flex: 1 },
+  filtroSelectLabel: {
     fontFamily: sans, fontSize: 9, letterSpacing: 1.5,
-    textTransform: 'uppercase', fontWeight: '700', color: INK_MID,
+    textTransform: 'uppercase', fontWeight: '700', color: INK_LIGHT, marginBottom: 6,
   },
-  filtroBtnActive: { color: INK },
-  filtroIndicator: {
-    position: 'absolute', bottom: -1, left: 0, right: 0,
-    height: 3, backgroundColor: INK,
+  filtroReload: { borderWidth: 1, borderColor: INK, paddingHorizontal: 12, paddingVertical: 10 },
+  filtroReloadText: { fontFamily: sans, fontSize: 16, color: INK, lineHeight: 18 },
+
+  // Select (trigger + sheet)
+  input: {
+    borderWidth: 1, borderColor: INK, borderRadius: 0,
+    paddingHorizontal: 12, paddingVertical: 10, backgroundColor: PAPER,
   },
-  filtroReload: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 8 },
+  selectTrigger: { flexDirection: 'row', alignItems: 'center' },
+  monoText: { fontFamily: mono, fontSize: 14, color: INK, flex: 1 },
+  selectCaret: { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: PAPER, borderTopWidth: 5, borderTopColor: INK, maxHeight: 320 },
+  sheetDivider: { borderTopWidth: 1, borderTopColor: RULE },
+  sheetOption: { paddingHorizontal: 20, paddingVertical: 14 },
+  sheetOptionText: { fontFamily: mono, fontSize: 14, color: INK },
+
+  // Toggle de fotos
+  fotosToggle: {
+    alignSelf: 'flex-start', borderWidth: 1, borderColor: INK,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  fotosToggleText: {
+    fontFamily: sans, fontSize: 9, letterSpacing: 1.5,
+    textTransform: 'uppercase', fontWeight: '700', color: INK,
+  },
 
   // Solicitud item
   item: {

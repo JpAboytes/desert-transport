@@ -4,6 +4,7 @@ node_modules/
 # Environment variables
 .env
 .env.local
+.env
 .env.*.local
 !.env.example
 
@@ -17,6 +18,8 @@ lambda/
 lambda/*.zip
 lambda/login/
 
+/docs
+
 # Expo
 .expo/
 .expo-shared/
@@ -26,6 +29,7 @@ expo-app/ios/
 # Vite
 pwa/dist/
 pwa/.env
+pwa/.env.production
 
 # Logs
 *.log
@@ -48,3 +52,8 @@ Thumbs.db
 
 # Firebase config (NO versionar — contiene API key)
 expo-app/google-services.json
+expo-app/app.config.js
+expo-app/app.json
+
+# Artefactos/secretos de despliegue prod (JWT, VAPID privada, env vars) — NUNCA versionar
+.deploy-prod/

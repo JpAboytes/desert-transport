@@ -75,7 +75,7 @@ vivas son las de las subcarpetas. Confirmar en API Gateway antes de tocarlo.
 
 ## Modelo de datos (inferido de las queries — verificar contra la BD real)
 
-- **`usuario`**: `idusuario`, `nombre`, `usuario`, `password` (⚠️ texto plano), `tusuario`, `push_token`.
+- **`usuario`**: `idusuario`, `nombre`, `usuario`, `password` (texto plano **por regla de negocio** — no migrar a hash), `tusuario`, `push_token`.
 - **`serviciomovil`** (la solicitud): `idserviciomovil`, `idsolicitante`→usuario, `idaprobador`→usuario,
   `estatus` (`Pendiente`/`Rechazado`/`En proceso`/`Reparado`), `tunidad` (`Camión`/otro=remolque),
   `odometro`, `numeconomico`, `descripcion`, `costo` (estimado), `fechahora`,
@@ -156,9 +156,9 @@ La decisión de pago (`{ autorizacionPago }`) es una rama aparte: valida que el 
 
 ## Deuda técnica / TODOs conocidos
 
-- ⚠️ **Passwords en texto plano** en `usuario.password` y en el `SELECT` del login → migrar a bcrypt.
+- **Passwords en texto plano** en `usuario.password` y en el `SELECT` del login: es una **decisión de negocio aceptada**, NO se migra a bcrypt/hash. (No proponer el cambio.)
 - `JWT_SECRET` y credenciales de BD viven en env vars de Lambda (no en repo). No commitear secretos.
-- `expo-app/constants/api.js`: URL hardcodeada; TODO mover a `extra.apiUrl` vía `app.config.js`.
+- ~~`expo-app/constants/api.js`: URL hardcodeada~~ → **resuelto**: `app.config.js` inyecta `extra.apiUrl` por entorno (`APP_ENV=production`/perfil EAS) y `constants/api.js` lo lee.
 - CORS `*` en todos los lambdas.
 - `pwa/.env.example` quedó con una URL placeholder de `us-east-1/prod`; la real es `us-east-2` (ver `.env`).
 
