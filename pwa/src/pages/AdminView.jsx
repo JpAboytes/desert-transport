@@ -86,9 +86,9 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
     setLoading(estatus);
     try {
       await onActualizar(s.idserviciomovil, estatus);
-      onToast(`Solicitud #${String(s.idserviciomovil).padStart(4,'0')} ${etiqueta}`);
-    } catch {
-      onToast('Error al actualizar la solicitud', 'error');
+      onToast(`Solicitud #${String(s.idserviciomovil)} ${etiqueta}`);
+    } catch (e) {
+      onToast(e?.response?.data?.message || 'Error al actualizar la solicitud', 'error');
     }
     setLoading(null);
   };
@@ -98,9 +98,9 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
     setLoading(key);
     try {
       await onPago(s.idserviciomovil, aprobado);
-      onToast(`Pago de #${String(s.idserviciomovil).padStart(4,'0')} ${aprobado ? 'autorizado' : 'rechazado'}`);
-    } catch {
-      onToast('Error al registrar el pago', 'error');
+      onToast(`Pago de #${String(s.idserviciomovil)} ${aprobado ? 'autorizado' : 'rechazado'}`);
+    } catch (e) {
+      onToast(e?.response?.data?.message || 'Error al registrar el pago', 'error');
     }
     setLoading(null);
   };
@@ -108,7 +108,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
   return (
     <div className="solicitud">
       <div className="solicitud__header">
-        <span className="solicitud__id">#{String(s.idserviciomovil).padStart(4, '0')}</span>
+        <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
         <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(est)}`}>
           {ESTATUS_LABEL[est] ?? est}
         </span>
@@ -218,17 +218,27 @@ export default function AdminView() {
   useEffect(() => { cargar(); }, [cargar]);
 
   const handleActualizar = async (id, estatus) => {
-    await actualizarEstatus(id, estatus);
-    setSolicitudes((prev) =>
-      prev.map((s) => s.idserviciomovil === id ? { ...s, estatus } : s)
-    );
+    try {
+      await actualizarEstatus(id, estatus);
+      setSolicitudes((prev) =>
+        prev.map((s) => s.idserviciomovil === id ? { ...s, estatus } : s)
+      );
+    } catch (e) {
+      cargar(); // el estado en BD difiere del de la lista (p. ej. 409): resincronizar
+      throw e;  // que el child muestre el mensaje real del servidor
+    }
   };
 
   const handlePago = async (id, aprobado) => {
-    await autorizarPago(id, aprobado);
-    setSolicitudes((prev) =>
-      prev.map((s) => s.idserviciomovil === id ? { ...s, autorizacionpago: aprobado ? 1 : 0 } : s)
-    );
+    try {
+      await autorizarPago(id, aprobado);
+      setSolicitudes((prev) =>
+        prev.map((s) => s.idserviciomovil === id ? { ...s, autorizacionpago: aprobado ? 1 : 0 } : s)
+      );
+    } catch (e) {
+      cargar();
+      throw e;
+    }
   };
 
   const lista = solicitudes.filter((s) =>

@@ -112,7 +112,7 @@ function MisSolicitudes({ refreshKey }) {
         {visibles.map((s) => (
         <div key={s.idserviciomovil} className="solicitud">
           <div className="solicitud__header">
-            <span className="solicitud__id">#{String(s.idserviciomovil).padStart(4, '0')}</span>
+            <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
             <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(displayEstatus(s))}`}>
               {displayEstatus(s)}
             </span>
@@ -180,7 +180,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
       {ordenadas.map((s) => (
         <div key={s.idserviciomovil} className="solicitud">
           <div className="solicitud__header">
-            <span className="solicitud__id">#{String(s.idserviciomovil).padStart(4, '0')}</span>
+            <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
             <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(s.estatus)}`}>
               {s.estatus}
             </span>
@@ -220,7 +220,7 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
     try {
       const urls = await subirFotos(fotos);
       await cerrarReparacion(solicitud.idserviciomovil, { costoReal, fotos: urls });
-      showToast(`Reparación #${String(solicitud.idserviciomovil).padStart(4, '0')} cerrada`);
+      showToast(`Reparación #${String(solicitud.idserviciomovil)} cerrada`);
       onClosed?.();
     } catch {
       showToast('Error al cerrar la reparación', 'error');

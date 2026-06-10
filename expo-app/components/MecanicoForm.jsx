@@ -189,7 +189,7 @@ function MisSolicitudes({ refreshKey }) {
       {visibles.map((s, i) => (
         <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
           <View style={styles.solicitudHeader}>
-            <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
+            <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
             <View style={[styles.estatusBadge, estatusStyleOf(displayEstatus(s))]}>
               <Text style={[styles.estatusText, estatusStyleOf(displayEstatus(s))]}>{displayEstatus(s).toUpperCase()}</Text>
             </View>
@@ -265,7 +265,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
       {ordenadas.map((s, i) => (
         <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
           <View style={styles.solicitudHeader}>
-            <Text style={styles.solicitudId}>#{String(s.idserviciomovil).padStart(4, '0')}</Text>
+            <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
             <View style={[styles.estatusBadge, estatusStyleOf(s.estatus)]}>
               <Text style={[styles.estatusText, estatusStyleOf(s.estatus)]}>{s.estatus.toUpperCase()}</Text>
             </View>
@@ -304,7 +304,7 @@ function CerrarTicketForm({ solicitud, showToast, onClosed }) {
     try {
       const urls = await subirFotos(fotos);
       await cerrarReparacion(solicitud.idserviciomovil, { costoReal, fotos: urls });
-      showToast?.(`Reparación #${String(solicitud.idserviciomovil).padStart(4, '0')} cerrada`);
+      showToast?.(`Reparación #${String(solicitud.idserviciomovil)} cerrada`);
       onClosed?.();
     } catch {
       showToast?.('Error al cerrar la reparación', 'error');

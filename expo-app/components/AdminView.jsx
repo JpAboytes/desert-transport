@@ -124,7 +124,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
     setLoading(estatus);
     try {
       await onActualizar(item.idserviciomovil, estatus);
-      onToast?.(`Solicitud #${String(item.idserviciomovil).padStart(4,'0')} ${etiqueta}`);
+      onToast?.(`Solicitud #${String(item.idserviciomovil)} ${etiqueta}`);
     } catch {
       onToast?.('Error al actualizar la solicitud', 'error');
     }
@@ -136,7 +136,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
     setLoading(key);
     try {
       await onPago(item.idserviciomovil, aprobado);
-      onToast?.(`Pago de #${String(item.idserviciomovil).padStart(4,'0')} ${aprobado ? 'autorizado' : 'rechazado'}`);
+      onToast?.(`Pago de #${String(item.idserviciomovil)} ${aprobado ? 'autorizado' : 'rechazado'}`);
     } catch {
       onToast?.('Error al registrar el pago', 'error');
     }
@@ -155,7 +155,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
   return (
     <View style={styles.item}>
       <View style={styles.itemHeader}>
-        <Text style={styles.itemId}>#{String(item.idserviciomovil).padStart(4, '0')}</Text>
+        <Text style={styles.itemId}>#{String(item.idserviciomovil)}</Text>
         <View style={[styles.estatusBadge, estatusStyle]}>
           <Text style={[styles.estatusText, estatusStyle]}>{est.toUpperCase()}</Text>
         </View>
