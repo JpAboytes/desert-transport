@@ -1,6 +1,6 @@
 {
-  "name": "Sistema de Gestión de Reparaciones",
-  "short_name": "Transporte App",
+  "name": "Desert Transport Service Center",
+  "short_name": "Desert Transport",
   "description": "Sistema de gestión de reparaciones de vehículos",
   "start_url": "/",
   "display": "standalone",

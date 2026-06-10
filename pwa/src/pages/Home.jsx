@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import MecanicoForm from './MecanicoForm';
 import AdminView from './AdminView';
+import Logo from '../components/Logo';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -16,9 +17,12 @@ export default function Home() {
   return (
     <div className="page">
       <header className="masthead">
-        <div className="masthead__brand">
-          <span className="masthead__title">Desert Transport</span>
-          <span className="masthead__subtitle">Sistema de gestión de reparaciones</span>
+        <div className="masthead__left">
+          <Logo size="sm" />
+          <div className="masthead__brand">
+            <span className="masthead__title">Desert Transport</span>
+            <span className="masthead__subtitle">SERVICE CENTER</span>
+          </div>
         </div>
         <button className="masthead__action" onClick={handleLogout}>
           Cerrar sesión

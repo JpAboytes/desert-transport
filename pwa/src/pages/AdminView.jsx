@@ -112,6 +112,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
         <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(est)}`}>
           {ESTATUS_LABEL[est] ?? est}
         </span>
+        {s.PO != null && <span className="po-box">PO {s.PO}</span>}
       </div>
 
       <div className="solicitud__meta">

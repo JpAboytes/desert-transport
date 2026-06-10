@@ -12,8 +12,11 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { login } from '../services/auth';
+import Logo from '../components/Logo';
 
 const INK       = '#0a0a0a';
+const BRAND     = '#046738';
+const BROWN     = '#553111';
 const INK_MID   = '#444444';
 const INK_LIGHT = '#888888';
 const RULE      = '#bbbbbb';
@@ -55,11 +58,16 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Logo (placeholder) */}
+        <View style={styles.logoWrap}>
+          <Logo size={120} />
+        </View>
+
         {/* Cabecera editorial */}
         <View style={styles.loginHead}>
-          <Text style={styles.loginTitle}>{'Sistema de Gestión\nde Reparaciones'}</Text>
+          <Text style={styles.loginTitle}>{'DESERT TRANSPORT'}</Text>
           <View style={styles.thinRule} />
-          <Text style={styles.loginSub}>Transporte App — Acceso al sistema</Text>
+          <Text style={styles.loginSub}>SERVICE CENTER — LOGIN</Text>
         </View>
 
         {/* Formulario */}
@@ -117,9 +125,11 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
 
+  logoWrap: { alignItems: 'center', marginBottom: 28 },
+
   loginHead: {
     borderTopWidth: 5,
-    borderTopColor: INK,
+    borderTopColor: BRAND,
     paddingTop: 20,
     marginBottom: 32,
   },
@@ -141,7 +151,7 @@ const styles = StyleSheet.create({
   loginSub: {
     fontFamily: sans,
     fontSize: 10,
-    color: INK_LIGHT,
+    color: BROWN,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -184,7 +194,7 @@ const styles = StyleSheet.create({
   },
 
   btn: {
-    backgroundColor: INK,
+    backgroundColor: BRAND,
     paddingVertical: 14,
     alignItems: 'center',
     borderRadius: 0,

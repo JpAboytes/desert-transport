@@ -116,6 +116,7 @@ function MisSolicitudes({ refreshKey }) {
             <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(displayEstatus(s))}`}>
               {displayEstatus(s)}
             </span>
+            {s.PO != null && <span className="po-box">PO {s.PO}</span>}
           </div>
           <div className="solicitud__meta">
             {s.tunidad}&nbsp;&middot;&nbsp;{s.numeconomico}&nbsp;&middot;&nbsp;{formatFecha(s.fechahora)}
@@ -184,6 +185,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
             <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(s.estatus)}`}>
               {s.estatus}
             </span>
+            {s.PO != null && <span className="po-box">PO {s.PO}</span>}
           </div>
           <div className="solicitud__meta">
             {s.tunidad}&nbsp;&middot;&nbsp;{s.numeconomico}&nbsp;&middot;&nbsp;{formatFecha(s.fechahora)}
@@ -369,7 +371,7 @@ export default function MecanicoForm({ user }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor="costoEstimado">Costo estimado ($)</label>
+          <label className="form-label" htmlFor="costoEstimado">Costo estimado ($Mxn)</label>
           <input id="costoEstimado" type="number" name="costoEstimado" value={form.costoEstimado}
             onChange={handleChange} required min="0" step="0.01" className="form-input" placeholder="0.00" />
         </div>

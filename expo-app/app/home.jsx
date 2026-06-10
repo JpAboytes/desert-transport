@@ -6,9 +6,12 @@ import { getToken, decodeToken, logout } from '../services/auth';
 import MecanicoForm from '../components/MecanicoForm';
 import AdminView from '../components/AdminView';
 import Toast from '../components/Toast';
+import Logo from '../components/Logo';
 import { registerForNotifications } from '../services/notifications';
 
 const INK     = '#0a0a0a';
+const BRAND   = '#046738';
+const BROWN   = '#553111';
 const INK_MID = '#444444';
 const RULE    = '#bbbbbb';
 const PAPER   = '#ffffff';
@@ -58,9 +61,12 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Masthead */}
       <View style={styles.masthead}>
-        <View>
-          <Text style={styles.mastheadTitle}>Desert Transport</Text>
-          <Text style={styles.mastheadSub}>Sistema de gestión de reparaciones</Text>
+        <View style={styles.mastheadLeft}>
+          <Logo size={52} />
+          <View>
+            <Text style={styles.mastheadTitle}>Desert Transport</Text>
+            <Text style={styles.mastheadSub}>SERVICE CENTER</Text>
+          </View>
         </View>
         <TouchableOpacity onPress={handleLogout} activeOpacity={0.6}>
           <Text style={styles.logoutBtn}>Cerrar sesión</Text>
@@ -93,18 +99,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: PAPER },
 
   masthead: {
-    borderTopWidth: 5, borderTopColor: INK,
+    borderTopWidth: 5, borderTopColor: BRAND,
     borderBottomWidth: 1, borderBottomColor: INK,
     paddingHorizontal: 20, paddingVertical: 12,
-    flexDirection: 'row', alignItems: 'flex-end',
+    flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', backgroundColor: PAPER,
   },
+  mastheadLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   mastheadTitle: {
     fontFamily: serif, fontSize: 15, fontWeight: '700',
     color: INK, letterSpacing: 1, textTransform: 'uppercase',
   },
   mastheadSub: {
-    fontFamily: sans, fontSize: 9, color: INK_MID,
+    fontFamily: sans, fontSize: 9, color: BROWN,
     letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 2,
   },
   logoutBtn: {
@@ -115,7 +122,7 @@ const styles = StyleSheet.create({
   scroll:    { flex: 1 },
   content:   { padding: 24, paddingBottom: 48 },
   userBlock: {
-    borderTopWidth: 3, borderTopColor: INK,
+    borderTopWidth: 3, borderTopColor: BROWN,
     borderBottomWidth: 1, borderBottomColor: RULE,
     paddingTop: 16, paddingBottom: 16, marginBottom: 24,
   },

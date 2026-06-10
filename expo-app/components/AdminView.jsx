@@ -7,6 +7,8 @@ import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/so
 import FotoThumb from './FotoThumb';
 
 const INK        = '#0a0a0a';
+const BRAND      = '#046738';
+const RED        = '#C0202A';
 const INK_MID    = '#444444';
 const INK_LIGHT  = '#888888';
 const RULE       = '#bbbbbb';
@@ -159,6 +161,9 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
         <View style={[styles.estatusBadge, estatusStyle]}>
           <Text style={[styles.estatusText, estatusStyle]}>{est.toUpperCase()}</Text>
         </View>
+        {item.PO != null && (
+          <View style={styles.poBox}><Text style={styles.poText}>PO {item.PO}</Text></View>
+        )}
       </View>
 
       <Text style={styles.itemMeta}>
@@ -391,16 +396,18 @@ const styles = StyleSheet.create({
   },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   itemId: { fontFamily: mono, fontSize: 14, fontWeight: '700', color: INK },
+  poBox:  { borderWidth: 1, borderColor: INK, paddingHorizontal: 8, paddingVertical: 2 },
+  poText: { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700', color: INK },
 
   estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   estatusText: {
     fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700',
   },
-  estatusPendiente:  { borderColor: INK_MID, color: INK_MID },
+  estatusPendiente:  { borderColor: INK, color: INK },
   estatusProceso:    { borderColor: INK, color: INK },
   estatusReparado:   { borderColor: INK, color: INK },
-  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
-  estatusRechazado:  { borderColor: INK_LIGHT, color: INK_LIGHT },
+  estatusPagado:     { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
+  estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 
   itemMeta: {
     fontFamily: sans, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
@@ -422,7 +429,7 @@ const styles = StyleSheet.create({
   // Acciones
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12 },
   btnAccion: { paddingVertical: 9, paddingHorizontal: 20, alignItems: 'center', minWidth: 96 },
-  btnAprobar: { backgroundColor: INK },
+  btnAprobar: { backgroundColor: BRAND },
   btnRechazar: { backgroundColor: PAPER, borderWidth: 1, borderColor: INK },
   btnAprobarText: {
     fontFamily: sans, color: PAPER, fontWeight: '700',

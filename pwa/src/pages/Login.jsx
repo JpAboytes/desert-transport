@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginRequest } from '../services/api';
+import Logo from '../components/Logo';
 
 export default function Login() {
   const [form, setForm] = useState({ usuario: '', password: '' });
@@ -28,12 +29,13 @@ export default function Login() {
 
   return (
     <div className="page--login">
+      <Logo size="lg" className="login-logo" />
       <div className="login-head">
         <h1 className="login-head__title">
-          Sistema de Gestión<br />de Reparaciones
+          DESERT TRANSPORT
         </h1>
         <hr className="login-head__rule" />
-        <p className="login-head__sub">Desert Transport &mdash; Acceso al sistema</p>
+        <p className="login-head__sub">SERVICE CENTER &mdash; LOGIN</p>
       </div>
 
       <form className="form" onSubmit={handleSubmit} autoComplete="off">

@@ -10,6 +10,9 @@ import FotoPicker from './FotoPicker';
 import FotoThumb from './FotoThumb';
 
 const INK        = '#0a0a0a';
+const BRAND      = '#046738';
+const BROWN      = '#553111';
+const RED        = '#C0202A';
 const INK_MID    = '#444444';
 const INK_LIGHT  = '#888888';
 const RULE       = '#bbbbbb';
@@ -193,6 +196,9 @@ function MisSolicitudes({ refreshKey }) {
             <View style={[styles.estatusBadge, estatusStyleOf(displayEstatus(s))]}>
               <Text style={[styles.estatusText, estatusStyleOf(displayEstatus(s))]}>{displayEstatus(s).toUpperCase()}</Text>
             </View>
+            {s.PO != null && (
+              <View style={styles.poBox}><Text style={styles.poText}>PO {s.PO}</Text></View>
+            )}
           </View>
           <Text style={styles.solicitudMeta}>
             {s.tunidad} · {s.numeconomico} · {formatFecha(s.fechahora)}
@@ -269,6 +275,9 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
             <View style={[styles.estatusBadge, estatusStyleOf(s.estatus)]}>
               <Text style={[styles.estatusText, estatusStyleOf(s.estatus)]}>{s.estatus.toUpperCase()}</Text>
             </View>
+            {s.PO != null && (
+              <View style={styles.poBox}><Text style={styles.poText}>PO {s.PO}</Text></View>
+            )}
           </View>
           <Text style={styles.solicitudMeta}>
             {s.tunidad} · {s.numeconomico} · {formatFecha(s.fechahora)}
@@ -519,7 +528,7 @@ export default function MecanicoForm({ user, showToast }) {
       </View>
 
       <View style={styles.fieldWrap}>
-        <Text style={styles.label}>Costo estimado ($)</Text>
+        <Text style={styles.label}>Costo estimado ($Mxn)</Text>
         <TextInput style={styles.input} value={form.costoEstimado} onChangeText={set('costoEstimado')}
           placeholder="0.00" placeholderTextColor={INK_LIGHT} keyboardType="decimal-pad" />
       </View>
@@ -568,11 +577,11 @@ const styles = StyleSheet.create({
   segmented:   { flexDirection: 'row', borderWidth: 1, borderColor: INK, marginBottom: 24 },
   segment:     { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: PAPER },
   segmentRight:{ borderLeftWidth: 1, borderLeftColor: INK },
-  segmentActive:    { backgroundColor: INK },
+  segmentActive:    { backgroundColor: BRAND },
   segmentText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', color: INK },
   segmentTextActive:{ color: PAPER },
 
-  greeting: { borderTopWidth: 3, borderTopColor: INK, paddingTop: 16, marginBottom: 24 },
+  greeting: { borderTopWidth: 3, borderTopColor: BROWN, paddingTop: 16, marginBottom: 24 },
   greetingText: { fontFamily: serif, fontSize: 18, color: INK, marginBottom: 4 },
   greetingSub: { fontFamily: sans, fontSize: 11, letterSpacing: 0.5, color: INK_MID },
 
@@ -605,13 +614,13 @@ const styles = StyleSheet.create({
   errorBox:  { borderLeftWidth: 3, borderLeftColor: INK, backgroundColor: PAPER_TINT, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 20 },
   errorText: { fontFamily: sans, fontSize: 13, color: INK },
 
-  btn:     { backgroundColor: INK, paddingVertical: 14, alignItems: 'center', borderRadius: 0 },
+  btn:     { backgroundColor: BRAND, paddingVertical: 14, alignItems: 'center', borderRadius: 0 },
   btnText: { fontFamily: sans, color: PAPER, fontWeight: '700', fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' },
 
   // Sección mis solicitudes
   misSolicitudesSection: { marginTop: 40 },
   sectionTitle: { fontFamily: serif, fontSize: 18, fontWeight: '700', color: INK },
-  sectionRule:  { borderTopWidth: 3, borderTopColor: INK, marginTop: 8, marginBottom: 8 },
+  sectionRule:  { borderTopWidth: 3, borderTopColor: BROWN, marginTop: 8, marginBottom: 8 },
   emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
 
   // Filtros (estatus + fecha) como selects
@@ -630,15 +639,17 @@ const styles = StyleSheet.create({
   solicitudItem: { borderBottomWidth: 1, borderBottomColor: INK, paddingVertical: 16 },
   solicitudHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   solicitudId:  { fontFamily: mono, fontSize: 14, fontWeight: '700', color: INK },
+  poBox:  { borderWidth: 1, borderColor: INK, paddingHorizontal: 8, paddingVertical: 2 },
+  poText: { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700', color: INK },
   solicitudMeta: { fontFamily: sans, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: INK_MID, marginBottom: 8 },
 
   estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   estatusText:  { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700' },
-  estatusPendiente:  { borderColor: INK_MID, color: INK_MID },
+  estatusPendiente:  { borderColor: INK, color: INK },
   estatusProceso:    { borderColor: INK, color: INK },
   estatusReparado:   { borderColor: INK, color: INK },
-  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
-  estatusRechazado:  { borderColor: INK_LIGHT, color: INK_LIGHT },
+  estatusPagado:     { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
+  estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 
   campo:      { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 3 },
   campoLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
