@@ -9,6 +9,19 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+// Compara la applicationServerKey de una suscripción existente con la clave VAPID actual.
+// Si difieren (p. ej. quedó una suscripción de antes de rotar las claves dev→prod), el push
+// service rechaza el envío con 403 / VapidPkHashMismatch.
+function mismaApplicationServerKey(sub, vapidPublic) {
+  const actual = sub.options?.applicationServerKey;
+  if (!actual) return false; // no se puede verificar → mejor re-suscribir
+  const a = new Uint8Array(actual);
+  const b = urlBase64ToUint8Array(vapidPublic);
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export function pushSoportado() {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
@@ -41,6 +54,14 @@ export async function activarNotificaciones() {
   if (permiso !== 'granted') throw new Error('Permiso de notificaciones denegado.');
 
   let sub = await reg.pushManager.getSubscription();
+
+  // Si ya hay una suscripción pero con OTRA applicationServerKey (clave VAPID vieja),
+  // descartarla: si no, se reenvía al backend y el push service la rechaza al enviar.
+  if (sub && !mismaApplicationServerKey(sub, VAPID_PUBLIC)) {
+    await sub.unsubscribe().catch(() => {});
+    sub = null;
+  }
+
   if (!sub) {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
