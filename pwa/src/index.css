@@ -559,7 +559,8 @@ body {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  font-size: 0.7rem;
+  font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
 }
 .periodo-nav__btn:disabled { opacity: 0.3; cursor: default; }

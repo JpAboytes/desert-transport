@@ -179,7 +179,7 @@ export default function ReportesAdmin() {
 
       {/* Navegación del periodo */}
       <div className="periodo-nav">
-        <button type="button" className="periodo-nav__btn" onClick={() => setOffset((o) => o - 1)}>◀</button>
+        <button type="button" className="periodo-nav__btn" onClick={() => setOffset((o) => o - 1)}>‹</button>
         <div className="periodo-nav__label-box">
           <span className="periodo-nav__label">{etiquetaPeriodo(tipoPeriodo, rango)}</span>
           {offset === 0 && <span className="periodo-nav__actual">Periodo actual</span>}
@@ -189,7 +189,7 @@ export default function ReportesAdmin() {
           className="periodo-nav__btn"
           onClick={() => setOffset((o) => Math.min(0, o + 1))}
           disabled={offset === 0}
-        >▶</button>
+        >›</button>
       </div>
 
       {loading && <p className="admin-estado">Cargando reporte...</p>}

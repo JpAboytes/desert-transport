@@ -199,7 +199,7 @@ export default function ReportesAdmin() {
       {/* Navegación del periodo */}
       <View style={styles.periodoNav}>
         <TouchableOpacity onPress={() => setOffset((o) => o - 1)} style={styles.navBtn} activeOpacity={0.7}>
-          <Text style={styles.navBtnText}>◀</Text>
+          <Text style={styles.navBtnText}>‹</Text>
         </TouchableOpacity>
         <View style={styles.periodoLabelBox}>
           <Text style={styles.periodoLabel}>{etiquetaPeriodo(tipoPeriodo, rango)}</Text>
@@ -211,7 +211,7 @@ export default function ReportesAdmin() {
           disabled={offset === 0}
           activeOpacity={0.7}
         >
-          <Text style={styles.navBtnText}>▶</Text>
+          <Text style={styles.navBtnText}>›</Text>
         </TouchableOpacity>
       </View>
 
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 19, backgroundColor: PAPER_TINT,
     alignItems: 'center', justifyContent: 'center',
   },
-  navBtnText: { fontFamily: sans, fontSize: 12, color: INK },
+  navBtnText: { fontFamily: sans, fontSize: 20, lineHeight: 22, color: INK },
   periodoLabelBox: { flex: 1, alignItems: 'center' },
   periodoLabel: { fontFamily: serif, fontSize: 16, fontWeight: '700', color: INK },
   periodoActual: {
