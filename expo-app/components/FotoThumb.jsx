@@ -23,7 +23,7 @@ export default function FotoThumb({ url, size = 56 }) {
 }
 
 const styles = StyleSheet.create({
-  thumb: { borderWidth: 1, borderColor: INK, backgroundColor: '#eee' },
+  thumb: { borderRadius: 10, backgroundColor: '#eee' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 16 },
   full: { width: '100%', height: '100%' },
 });

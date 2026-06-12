@@ -70,6 +70,7 @@ function CustomSelect({ value, options, onChange, placeholder }) {
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
           <View style={styles.sheet}>
+            <View style={styles.sheetGrabber} />
             <FlatList
               data={options}
               keyExtractor={(item, i) => `${item}-${i}`}
@@ -348,58 +349,69 @@ export default function AdminView({ showToast }) {
   );
 }
 
+// Sombra suave estilo iOS para tarjetas y botones destacados.
+const CARD_SHADOW = {
+  shadowColor: INK,
+  shadowOpacity: 0.06,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 12,
+  elevation: 2,
+};
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
   // Filtros (estatus + fecha) como selects
   filtroSelects: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-    borderBottomWidth: 1, borderBottomColor: INK, paddingBottom: 14, marginBottom: 14,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginBottom: 16,
   },
   filtroSelectCol: { flex: 1 },
   filtroSelectLabel: {
     fontFamily: sans, fontSize: 9, letterSpacing: 1.5,
     textTransform: 'uppercase', fontWeight: '700', color: INK_LIGHT, marginBottom: 6,
   },
-  filtroReload: { borderWidth: 1, borderColor: INK, paddingHorizontal: 12, paddingVertical: 10 },
+  filtroReload: { backgroundColor: PAPER_TINT, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
   filtroReloadText: { fontFamily: sans, fontSize: 16, color: INK, lineHeight: 18 },
 
   // Select (trigger + sheet)
   input: {
-    borderWidth: 1, borderColor: INK, borderRadius: 0,
-    paddingHorizontal: 12, paddingVertical: 10, backgroundColor: PAPER,
+    backgroundColor: PAPER_TINT, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
   },
   selectTrigger: { flexDirection: 'row', alignItems: 'center' },
   monoText: { fontFamily: mono, fontSize: 14, color: INK, flex: 1 },
   selectCaret: { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: PAPER, borderTopWidth: 5, borderTopColor: INK, maxHeight: 320 },
-  sheetDivider: { borderTopWidth: 1, borderTopColor: RULE },
+  sheet: {
+    backgroundColor: PAPER, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: 320, paddingBottom: 12, overflow: 'hidden',
+  },
+  sheetGrabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: RULE, marginTop: 8, marginBottom: 4 },
+  sheetDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE },
   sheetOption: { paddingHorizontal: 20, paddingVertical: 14 },
   sheetOptionText: { fontFamily: mono, fontSize: 14, color: INK },
 
-  // Toggle de fotos
+  // Toggle de fotos (pill)
   fotosToggle: {
-    alignSelf: 'flex-start', borderWidth: 1, borderColor: INK,
-    paddingHorizontal: 12, paddingVertical: 6,
+    alignSelf: 'flex-start', backgroundColor: PAPER_TINT, borderRadius: 999,
+    paddingHorizontal: 14, paddingVertical: 7,
   },
   fotosToggleText: {
     fontFamily: sans, fontSize: 9, letterSpacing: 1.5,
     textTransform: 'uppercase', fontWeight: '700', color: INK,
   },
 
-  // Solicitud item
+  // Solicitud item (tarjeta iOS)
   item: {
-    borderTopWidth: 1,
-    borderTopColor: INK,
-    paddingVertical: 16,
+    backgroundColor: PAPER, borderRadius: 16, padding: 16, marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: RULE, ...CARD_SHADOW,
   },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   itemId: { fontFamily: mono, fontSize: 14, fontWeight: '700', color: INK },
-  poBox:  { borderWidth: 1, borderColor: INK, paddingHorizontal: 8, paddingVertical: 2 },
+  poBox:  { backgroundColor: PAPER_TINT, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   poText: { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700', color: INK },
 
-  estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  estatusBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   estatusText: {
     fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700',
   },
@@ -426,11 +438,11 @@ const styles = StyleSheet.create({
   fotoCol: { gap: 4 },
   fotosRowAdmin: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
-  // Acciones
+  // Acciones (botones pill)
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  btnAccion: { paddingVertical: 9, paddingHorizontal: 20, alignItems: 'center', minWidth: 96 },
-  btnAprobar: { backgroundColor: BRAND },
-  btnRechazar: { backgroundColor: PAPER, borderWidth: 1, borderColor: INK },
+  btnAccion: { paddingVertical: 10, paddingHorizontal: 20, alignItems: 'center', minWidth: 96, borderRadius: 999 },
+  btnAprobar: { backgroundColor: BRAND, ...CARD_SHADOW },
+  btnRechazar: { backgroundColor: PAPER_TINT },
   btnAprobarText: {
     fontFamily: sans, color: PAPER, fontWeight: '700',
     fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
@@ -442,7 +454,7 @@ const styles = StyleSheet.create({
 
   // Error / vacío
   errorBox: {
-    borderLeftWidth: 3, borderLeftColor: INK,
+    borderLeftWidth: 3, borderLeftColor: INK, borderRadius: 12,
     backgroundColor: PAPER_TINT, padding: 12, marginVertical: 16,
   },
   errorText: { fontFamily: sans, fontSize: 13, color: INK },

@@ -3,6 +3,7 @@ import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/ap
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
 import BotonNotificaciones from '../components/BotonNotificaciones';
+import ReportesAdmin from '../components/ReportesAdmin';
 import { useToast } from '../hooks/useToast';
 
 const ESTATUS_LABEL = {
@@ -201,6 +202,7 @@ export default function AdminView() {
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
+  const [tab, setTab] = useState('solicitudes');
   const { toast, showToast, hideToast } = useToast();
 
   const cargar = useCallback(async () => {
@@ -253,6 +255,28 @@ export default function AdminView() {
 
       <BotonNotificaciones showToast={showToast} />
 
+      {/* Pestañas del administrador (mismo patrón que MecanicoForm) */}
+      <div className="segmented">
+        <button
+          type="button"
+          className={`segmented__btn ${tab === 'solicitudes' ? 'segmented__btn--active' : ''}`}
+          onClick={() => setTab('solicitudes')}
+        >
+          Solicitudes
+        </button>
+        <button
+          type="button"
+          className={`segmented__btn ${tab === 'reportes' ? 'segmented__btn--active' : ''}`}
+          onClick={() => setTab('reportes')}
+        >
+          Reportes
+        </button>
+      </div>
+
+      {tab === 'reportes' ? (
+        <ReportesAdmin />
+      ) : (
+        <>
       {/* Filtros (estatus + fecha) */}
       <div className="filtros-select">
         <label className="filtros-select__group">
@@ -282,6 +306,8 @@ export default function AdminView() {
           <SolicitudRow key={s.idserviciomovil} s={s} onActualizar={handleActualizar} onPago={handlePago} onToast={showToast} />
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }

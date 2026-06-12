@@ -128,9 +128,7 @@ const styles = StyleSheet.create({
   logoWrap: { alignItems: 'center', marginBottom: 28 },
 
   loginHead: {
-    borderTopWidth: 5,
-    borderTopColor: BRAND,
-    paddingTop: 20,
+    alignItems: 'center',
     marginBottom: 32,
   },
   loginTitle: {
@@ -141,12 +139,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     lineHeight: 28,
+    textAlign: 'center',
   },
   thinRule: {
-    borderTopWidth: 1,
-    borderTopColor: RULE,
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: BRAND,
     marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   loginSub: {
     fontFamily: sans,
@@ -154,6 +155,7 @@ const styles = StyleSheet.create({
     color: BROWN,
     letterSpacing: 2,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
 
   form: { width: '100%' },
@@ -167,24 +169,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderColor: INK,
-    borderRadius: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    backgroundColor: PAPER_TINT,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     fontFamily: mono,
     fontSize: 15,
     color: INK,
-    backgroundColor: PAPER,
     marginBottom: 20,
   },
 
   errorBox: {
     borderLeftWidth: 3,
     borderLeftColor: INK,
+    borderRadius: 12,
     backgroundColor: PAPER_TINT,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginBottom: 20,
   },
   errorText: {
@@ -195,9 +196,14 @@ const styles = StyleSheet.create({
 
   btn: {
     backgroundColor: BRAND,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    borderRadius: 0,
+    borderRadius: 14,
+    shadowColor: INK,
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 2,
   },
   btnDisabled: { backgroundColor: INK_LIGHT },
   btnText: {

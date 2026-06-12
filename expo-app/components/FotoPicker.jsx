@@ -64,11 +64,11 @@ export default function FotoPicker({ fotos = [], onChange, disabled, max = 7 }) 
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
-  btn: { flex: 1, borderWidth: 1, borderColor: INK, paddingVertical: 11, alignItems: 'center', backgroundColor: PAPER },
+  btn: { flex: 1, backgroundColor: PAPER_TINT, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   btnText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: INK },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   thumbWrap: { position: 'relative' },
-  thumb: { width: 64, height: 64, borderWidth: 1, borderColor: RULE },
+  thumb: { width: 64, height: 64, borderRadius: 10 },
   quitar: {
     position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11,
     backgroundColor: INK, alignItems: 'center', justifyContent: 'center',

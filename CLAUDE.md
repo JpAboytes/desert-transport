@@ -142,8 +142,10 @@ La decisión de pago (`{ autorizacionPago }`) es una rama aparte: valida que el 
 - **Idioma**: todo en español (código, comentarios, UI, identificadores de dominio). Mantenerlo.
 - **Lambdas**: cada handler maneja `OPTIONS` (CORS `*`), valida JWT, usa helper `resp()` y cierra
   la conexión en `finally`. CORS abierto a `*` (revisar antes de producción seria).
-- **Estética móvil**: estilo editorial/periódico (serif + mono, negro `#0a0a0a` sobre papel
-  `#ffffff`, reglas finas, mayúsculas con tracking). Respetar esa paleta al añadir pantallas.
+- **Estética (móvil y PWA)**: tipografía editorial (serif + mono, mayúsculas con tracking) sobre
+  paleta negro `#0a0a0a` / papel `#ffffff` / tint `#f2f1ee`, con estructura **moderna tipo iOS**:
+  tarjetas redondeadas (radius 16) con sombra suave, inputs tintados sin borde (radius 12),
+  botones/badges pill y control segmentado con pista tintada. Respetar paleta y patrón al añadir pantallas.
 - **Fechas**: el front manda ISO 8601; el lambda lo convierte a `DATETIME` MySQL
   (`.slice(0,19).replace('T',' ')`). MySQL no acepta el `T`/ms/`Z`.
 

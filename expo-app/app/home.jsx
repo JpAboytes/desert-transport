@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { getToken, decodeToken, logout } from '../services/auth';
 import MecanicoForm from '../components/MecanicoForm';
 import AdminView from '../components/AdminView';
+import ReportesAdmin from '../components/ReportesAdmin';
 import Toast from '../components/Toast';
 import Logo from '../components/Logo';
 import { registerForNotifications } from '../services/notifications';
@@ -22,6 +23,7 @@ const sans  = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
 export default function HomeScreen() {
   const [user, setUser] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [adminTab, setAdminTab] = useState('solicitudes');
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -80,11 +82,32 @@ export default function HomeScreen() {
 
       {user.tusuario === 'Administrador' && (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          {/* Pestañas del administrador (mismo patrón que MecanicoForm) */}
+          <View style={styles.segmented}>
+            <TouchableOpacity
+              style={[styles.segment, adminTab === 'solicitudes' && styles.segmentActive]}
+              onPress={() => setAdminTab('solicitudes')} activeOpacity={0.7}
+            >
+              <Text style={[styles.segmentText, adminTab === 'solicitudes' && styles.segmentTextActive]}>Solicitudes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segment, styles.segmentRight, adminTab === 'reportes' && styles.segmentActive]}
+              onPress={() => setAdminTab('reportes')} activeOpacity={0.7}
+            >
+              <Text style={[styles.segmentText, adminTab === 'reportes' && styles.segmentTextActive]}>Reportes</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.userBlock}>
-            <Text style={styles.userName}>Solicitudes de servicio</Text>
+            <Text style={styles.userName}>
+              {adminTab === 'solicitudes' ? 'Solicitudes de servicio' : 'Reportes'}
+            </Text>
             <Text style={styles.userMeta}>{user.nombre} · Administrador</Text>
           </View>
-          <AdminView showToast={showToast} />
+
+          {adminTab === 'solicitudes'
+            ? <AdminView showToast={showToast} />
+            : <ReportesAdmin />}
         </ScrollView>
       )}
 
@@ -100,7 +123,7 @@ const styles = StyleSheet.create({
 
   masthead: {
     borderTopWidth: 5, borderTopColor: BRAND,
-    borderBottomWidth: 1, borderBottomColor: INK,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: RULE,
     paddingHorizontal: 20, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', backgroundColor: PAPER,
@@ -116,16 +139,22 @@ const styles = StyleSheet.create({
   },
   logoutBtn: {
     fontFamily: sans, fontSize: 10, color: INK,
-    letterSpacing: 1.5, textTransform: 'uppercase', textDecorationLine: 'underline',
+    letterSpacing: 1.5, textTransform: 'uppercase',
+    backgroundColor: PAPER_TINT, borderRadius: 999,
+    paddingHorizontal: 14, paddingVertical: 7, overflow: 'hidden',
   },
 
   scroll:    { flex: 1 },
   content:   { padding: 24, paddingBottom: 48 },
-  userBlock: {
-    borderTopWidth: 3, borderTopColor: BROWN,
-    borderBottomWidth: 1, borderBottomColor: RULE,
-    paddingTop: 16, paddingBottom: 16, marginBottom: 24,
-  },
+
+  // Control segmentado (pestañas) estilo iOS — mismo patrón que MecanicoForm
+  segmented:   { flexDirection: 'row', backgroundColor: PAPER_TINT, borderRadius: 12, padding: 3, marginBottom: 24 },
+  segment:     { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9 },
+  segmentRight:{},
+  segmentActive:    { backgroundColor: BRAND },
+  segmentText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', color: INK },
+  segmentTextActive:{ color: PAPER },
+  userBlock: { paddingBottom: 8, marginBottom: 16 },
   userName: {
     fontFamily: serif, fontSize: 20, fontWeight: '700',
     color: INK, letterSpacing: 0.3, marginBottom: 4,

@@ -107,7 +107,7 @@ function CustomSelect({ value, options, onChange, placeholder, disabled }) {
   return (
     <>
       <TouchableOpacity
-        style={[styles.input, styles.selectTrigger, disabled && { borderColor: RULE }]}
+        style={[styles.input, styles.selectTrigger, disabled && { opacity: 0.5 }]}
         onPress={() => !disabled && setVisible(true)}
         activeOpacity={0.7}
         disabled={disabled}
@@ -120,6 +120,7 @@ function CustomSelect({ value, options, onChange, placeholder, disabled }) {
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
           <View style={styles.sheet}>
+            <View style={styles.sheetGrabber} />
             <FlatList
               data={options}
               keyExtractor={(item, i) => `${item}-${i}`}
@@ -189,8 +190,8 @@ function MisSolicitudes({ refreshKey }) {
         </Text>
       )}
 
-      {visibles.map((s, i) => (
-        <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
+      {visibles.map((s) => (
+        <View key={s.idserviciomovil} style={styles.solicitudItem}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
             <View style={[styles.estatusBadge, estatusStyleOf(displayEstatus(s))]}>
@@ -268,8 +269,8 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
 
   return (
     <>
-      {ordenadas.map((s, i) => (
-        <View key={s.idserviciomovil} style={[styles.solicitudItem, i === 0 && { borderTopWidth: 1, borderTopColor: INK }]}>
+      {ordenadas.map((s) => (
+        <View key={s.idserviciomovil} style={styles.solicitudItem}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
             <View style={[styles.estatusBadge, estatusStyleOf(s.estatus)]}>
@@ -569,19 +570,28 @@ export default function MecanicoForm({ user, showToast }) {
   );
 }
 
+// Sombra suave estilo iOS para tarjetas y botones destacados.
+const CARD_SHADOW = {
+  shadowColor: INK,
+  shadowOpacity: 0.06,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 12,
+  elevation: 2,
+};
+
 const styles = StyleSheet.create({
   scroll:     { flex: 1 },
   container:  { padding: 24, paddingBottom: 48 },
 
-  // Control segmentado (pestañas)
-  segmented:   { flexDirection: 'row', borderWidth: 1, borderColor: INK, marginBottom: 24 },
-  segment:     { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: PAPER },
-  segmentRight:{ borderLeftWidth: 1, borderLeftColor: INK },
-  segmentActive:    { backgroundColor: BRAND },
+  // Control segmentado (pestañas) estilo iOS: pista tintada + segmento activo redondeado
+  segmented:   { flexDirection: 'row', backgroundColor: PAPER_TINT, borderRadius: 12, padding: 3, marginBottom: 24 },
+  segment:     { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9 },
+  segmentRight:{},
+  segmentActive:    { backgroundColor: BRAND, ...CARD_SHADOW },
   segmentText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', color: INK },
   segmentTextActive:{ color: PAPER },
 
-  greeting: { borderTopWidth: 3, borderTopColor: BROWN, paddingTop: 16, marginBottom: 24 },
+  greeting: { marginBottom: 24 },
   greetingText: { fontFamily: serif, fontSize: 18, color: INK, marginBottom: 4 },
   greetingSub: { fontFamily: sans, fontSize: 11, letterSpacing: 0.5, color: INK_MID },
 
@@ -592,58 +602,65 @@ const styles = StyleSheet.create({
     letterSpacing: 2, textTransform: 'uppercase', color: INK, marginBottom: 6,
   },
   input: {
-    borderWidth: 1, borderColor: INK, borderRadius: 0,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontFamily: mono, fontSize: 14, color: INK, backgroundColor: PAPER,
+    backgroundColor: PAPER_TINT, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontFamily: mono, fontSize: 14, color: INK,
   },
   monoText: { fontFamily: mono, fontSize: 14, color: INK, flex: 1 },
   textarea:  { minHeight: 96, textAlignVertical: 'top' },
 
-  selectTrigger: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  selectTrigger: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
   selectCaret:   { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet:   { backgroundColor: PAPER, borderTopWidth: 5, borderTopColor: INK, maxHeight: 320 },
-  sheetDivider:     { borderTopWidth: 1, borderTopColor: RULE },
+  sheet:   {
+    backgroundColor: PAPER, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: 320, paddingBottom: 12, overflow: 'hidden',
+  },
+  sheetGrabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: RULE, marginTop: 8, marginBottom: 4 },
+  sheetDivider:     { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE },
   sheetOption:      { paddingHorizontal: 20, paddingVertical: 14 },
   sheetOptionText:  { fontFamily: mono, fontSize: 14, color: INK },
 
-  photoPlaceholder: { borderWidth: 1, borderColor: RULE, borderStyle: 'dashed', padding: 20, alignItems: 'center' },
+  photoPlaceholder: { borderWidth: 1, borderColor: RULE, borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center' },
   photoPlaceholderText: { fontFamily: sans, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: INK_LIGHT },
 
-  errorBox:  { borderLeftWidth: 3, borderLeftColor: INK, backgroundColor: PAPER_TINT, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 20 },
+  errorBox:  { backgroundColor: PAPER_TINT, borderRadius: 12, borderLeftWidth: 3, borderLeftColor: INK, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 20 },
   errorText: { fontFamily: sans, fontSize: 13, color: INK },
 
-  btn:     { backgroundColor: BRAND, paddingVertical: 14, alignItems: 'center', borderRadius: 0 },
+  btn:     { backgroundColor: BRAND, paddingVertical: 15, alignItems: 'center', borderRadius: 14, ...CARD_SHADOW },
   btnText: { fontFamily: sans, color: PAPER, fontWeight: '700', fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' },
 
   // Sección mis solicitudes
-  misSolicitudesSection: { marginTop: 40 },
+  misSolicitudesSection: { marginTop: 0 },
   sectionTitle: { fontFamily: serif, fontSize: 18, fontWeight: '700', color: INK },
   sectionRule:  { borderTopWidth: 3, borderTopColor: BROWN, marginTop: 8, marginBottom: 8 },
   emptyText:    { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 12 },
 
   // Filtros (estatus + fecha) como selects
-  filtroSelects:     { flexDirection: 'row', gap: 12, borderBottomWidth: 1, borderBottomColor: INK, paddingBottom: 14, marginBottom: 14 },
+  filtroSelects:     { flexDirection: 'row', gap: 12, marginBottom: 16 },
   filtroSelectCol:   { flex: 1 },
   filtroSelectLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_LIGHT, marginBottom: 6 },
 
-  // Toggle de fotos
-  fotosToggle:     { alignSelf: 'flex-start', borderWidth: 1, borderColor: INK, paddingHorizontal: 12, paddingVertical: 6 },
+  // Toggle de fotos (pill)
+  fotosToggle:     { alignSelf: 'flex-start', backgroundColor: PAPER_TINT, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   fotosToggleText: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK },
   fotosBlock:      { gap: 10, marginTop: 8 },
   fotoCol:         { gap: 4 },
   fotosRowAdmin:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
-  // Items solicitud
-  solicitudItem: { borderBottomWidth: 1, borderBottomColor: INK, paddingVertical: 16 },
+  // Items solicitud (tarjeta iOS)
+  solicitudItem: {
+    backgroundColor: PAPER, borderRadius: 16, padding: 16, marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: RULE, ...CARD_SHADOW,
+  },
   solicitudHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   solicitudId:  { fontFamily: mono, fontSize: 14, fontWeight: '700', color: INK },
-  poBox:  { borderWidth: 1, borderColor: INK, paddingHorizontal: 8, paddingVertical: 2 },
+  poBox:  { backgroundColor: PAPER_TINT, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   poText: { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700', color: INK },
   solicitudMeta: { fontFamily: sans, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: INK_MID, marginBottom: 8 },
 
-  estatusBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  estatusBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   estatusText:  { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700' },
   estatusPendiente:  { borderColor: INK, color: INK },
   estatusProceso:    { borderColor: INK, color: INK },
@@ -656,7 +673,7 @@ const styles = StyleSheet.create({
   campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
 
   // Formulario de cierre de ticket
-  cierreBox: { marginTop: 14, borderTopWidth: 1, borderTopColor: RULE, paddingTop: 14 },
+  cierreBox: { marginTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE, paddingTop: 14 },
 
   // Miniaturas de fotos
   fotosRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
