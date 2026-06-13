@@ -10,6 +10,7 @@ const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
 const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', 'Últimos 7 días', 'Últimos 30 días'];
+const POR_PAGINA   = 10;
 
 const estatusSlug = (e) => e.toLowerCase().replace(/\s+/g, '-');
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
@@ -64,6 +65,7 @@ function MisSolicitudes({ refreshKey }) {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
 
   useEffect(() => {
     setLoading(true);
@@ -73,6 +75,9 @@ function MisSolicitudes({ refreshKey }) {
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
+  // Al cambiar los filtros se vuelve a la primera página.
+  useEffect(() => { setVisibleCount(POR_PAGINA); }, [filtro, filtroFecha]);
+
   if (loading) return <p className="admin-estado">Cargando solicitudes...</p>;
 
   // Más reciente primero (por id) + filtros por estatus (derivado para el pago) y fecha
@@ -81,6 +86,7 @@ function MisSolicitudes({ refreshKey }) {
     (filtro === 'Todos' || displayEstatus(s) === filtro) &&
     dentroDeRango(s.fechahora, filtroFecha)
   );
+  const pagina = visibles.slice(0, visibleCount);
 
   return (
     <>
@@ -109,7 +115,7 @@ function MisSolicitudes({ refreshKey }) {
       )}
 
       <div className="solicitudes-lista">
-        {visibles.map((s) => (
+        {pagina.map((s) => (
         <div key={s.idserviciomovil} className="solicitud">
           <div className="solicitud__header">
             <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
@@ -124,7 +130,7 @@ function MisSolicitudes({ refreshKey }) {
           {s.odometro != null && (
             <div className="solicitud__field">
               <span className="solicitud__field-label">Odómetro</span>
-              {Number(s.odometro).toLocaleString('es-MX')} km
+              {Number(s.odometro).toLocaleString('es-MX')} mi
             </div>
           )}
           <div className="solicitud__field">
@@ -153,6 +159,12 @@ function MisSolicitudes({ refreshKey }) {
         </div>
         ))}
       </div>
+
+      {visibles.length > visibleCount && (
+        <button type="button" className="btn-ver-mas" onClick={() => setVisibleCount((c) => c + POR_PAGINA)}>
+          Ver más solicitudes ({visibles.length - visibleCount})
+        </button>
+      )}
     </>
   );
 }
@@ -162,6 +174,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [localKey, setLocalKey] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
 
   useEffect(() => {
     setLoading(true);
@@ -177,8 +190,9 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
   const ordenadas = [...lista].sort((a, b) => b.idserviciomovil - a.idserviciomovil);
 
   return (
+    <>
     <div className="solicitudes-lista">
-      {ordenadas.map((s) => (
+      {ordenadas.slice(0, visibleCount).map((s) => (
         <div key={s.idserviciomovil} className="solicitud">
           <div className="solicitud__header">
             <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
@@ -202,6 +216,13 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
         </div>
       ))}
     </div>
+
+    {ordenadas.length > visibleCount && (
+      <button type="button" className="btn-ver-mas" onClick={() => setVisibleCount((c) => c + POR_PAGINA)}>
+        Ver más solicitudes ({ordenadas.length - visibleCount})
+      </button>
+    )}
+    </>
   );
 }
 
@@ -347,7 +368,7 @@ export default function MecanicoForm({ user }) {
 
         {esCamion && (
           <div className="form-group">
-            <label className="form-label" htmlFor="odometro">Odómetro (km)</label>
+            <label className="form-label" htmlFor="odometro">Odómetro (mi)</label>
             <input id="odometro" type="number" name="odometro" value={form.odometro}
               onChange={handleChange} required min="0" className="form-input" placeholder="0" />
           </div>

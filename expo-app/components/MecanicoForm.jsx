@@ -27,6 +27,7 @@ const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
 const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
+const POR_PAGINA   = 10;
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
@@ -120,7 +121,6 @@ function CustomSelect({ value, options, onChange, placeholder, disabled }) {
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
           <View style={styles.sheet}>
-            <View style={styles.sheetGrabber} />
             <FlatList
               data={options}
               keyExtractor={(item, i) => `${item}-${i}`}
@@ -144,6 +144,7 @@ function MisSolicitudes({ refreshKey }) {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -159,6 +160,9 @@ function MisSolicitudes({ refreshKey }) {
 
   useEffect(() => { cargar(); }, [cargar, refreshKey]);
 
+  // Al cambiar los filtros se vuelve a la primera página.
+  useEffect(() => { setVisibleCount(POR_PAGINA); }, [filtro, filtroFecha]);
+
   if (loading) return <ActivityIndicator color={INK} style={{ marginTop: 16 }} />;
 
   // Más reciente primero (por id) + filtros por estatus (derivado para el pago) y fecha
@@ -167,6 +171,7 @@ function MisSolicitudes({ refreshKey }) {
     (filtro === 'Todos' || displayEstatus(s) === filtro) &&
     dentroDeRango(s.fechahora, filtroFecha)
   );
+  const pagina = visibles.slice(0, visibleCount);
 
   return (
     <>
@@ -190,7 +195,7 @@ function MisSolicitudes({ refreshKey }) {
         </Text>
       )}
 
-      {visibles.map((s) => (
+      {pagina.map((s) => (
         <View key={s.idserviciomovil} style={styles.solicitudItem}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
@@ -207,7 +212,7 @@ function MisSolicitudes({ refreshKey }) {
           {s.odometro != null && (
             <View style={styles.campo}>
               <Text style={styles.campoLabel}>Odómetro  </Text>
-              <Text style={styles.campoValor}>{Number(s.odometro).toLocaleString('es-MX')} km</Text>
+              <Text style={styles.campoValor}>{Number(s.odometro).toLocaleString('es-MX')} mi</Text>
             </View>
           )}
           <View style={styles.campo}>
@@ -235,6 +240,16 @@ function MisSolicitudes({ refreshKey }) {
           <FotosColapsables fotos={s.fotos} />
         </View>
       ))}
+
+      {visibles.length > visibleCount && (
+        <TouchableOpacity
+          style={styles.btnVerMas}
+          onPress={() => setVisibleCount((c) => c + POR_PAGINA)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.btnVerMasText}>Ver más solicitudes ({visibles.length - visibleCount})</Text>
+        </TouchableOpacity>
+      )}
     </>
   );
 }
@@ -244,6 +259,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [localKey, setLocalKey] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -269,7 +285,7 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
 
   return (
     <>
-      {ordenadas.map((s) => (
+      {ordenadas.slice(0, visibleCount).map((s) => (
         <View key={s.idserviciomovil} style={styles.solicitudItem}>
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
@@ -294,6 +310,16 @@ function ReparacionesEnProceso({ refreshKey, showToast }) {
           <CerrarTicketForm solicitud={s} showToast={showToast} onClosed={() => setLocalKey((k) => k + 1)} />
         </View>
       ))}
+
+      {ordenadas.length > visibleCount && (
+        <TouchableOpacity
+          style={styles.btnVerMas}
+          onPress={() => setVisibleCount((c) => c + POR_PAGINA)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.btnVerMasText}>Ver más solicitudes ({ordenadas.length - visibleCount})</Text>
+        </TouchableOpacity>
+      )}
     </>
   );
 }
@@ -507,7 +533,7 @@ export default function MecanicoForm({ user, showToast }) {
 
       {esCamion && (
         <View style={styles.fieldWrap}>
-          <Text style={styles.label}>Odómetro (km)</Text>
+          <Text style={styles.label}>Odómetro (mi)</Text>
           <TextInput style={styles.input} value={form.odometro} onChangeText={set('odometro')}
             placeholder="0" placeholderTextColor={INK_LIGHT} keyboardType="numeric" />
         </View>
@@ -612,12 +638,12 @@ const styles = StyleSheet.create({
   selectTrigger: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
   selectCaret:   { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  // Diálogo centrado (no bottom sheet: abajo interfiere con la barra de navegación del teléfono)
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 36 },
   sheet:   {
-    backgroundColor: PAPER, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: 320, paddingBottom: 12, overflow: 'hidden',
+    backgroundColor: PAPER, borderRadius: 20,
+    maxHeight: 380, paddingVertical: 6, overflow: 'hidden', ...CARD_SHADOW,
   },
-  sheetGrabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: RULE, marginTop: 8, marginBottom: 4 },
   sheetDivider:     { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE },
   sheetOption:      { paddingHorizontal: 20, paddingVertical: 14 },
   sheetOptionText:  { fontFamily: mono, fontSize: 14, color: INK },
@@ -671,6 +697,16 @@ const styles = StyleSheet.create({
   campo:      { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 3 },
   campoLabel: { fontFamily: sans, fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', color: INK_MID },
   campoValor: { fontFamily: serif, fontSize: 14, color: INK, flex: 1 },
+
+  // Botón "ver más solicitudes" (paginación cliente)
+  btnVerMas: {
+    backgroundColor: PAPER_TINT, borderRadius: 14, paddingVertical: 13,
+    alignItems: 'center', marginTop: 4, marginBottom: 12,
+  },
+  btnVerMasText: {
+    fontFamily: sans, fontSize: 10, letterSpacing: 2,
+    textTransform: 'uppercase', fontWeight: '700', color: INK,
+  },
 
   // Formulario de cierre de ticket
   cierreBox: { marginTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE, paddingTop: 14 },

@@ -21,6 +21,7 @@ const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
+const POR_PAGINA = 10;
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
@@ -70,7 +71,6 @@ function CustomSelect({ value, options, onChange, placeholder }) {
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableOpacity style={styles.overlay} onPress={() => setVisible(false)} activeOpacity={1}>
           <View style={styles.sheet}>
-            <View style={styles.sheetGrabber} />
             <FlatList
               data={options}
               keyExtractor={(item, i) => `${item}-${i}`}
@@ -174,7 +174,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
       {item.odometro != null && (
         <View style={styles.campo}>
           <Text style={styles.campoLabel}>Odómetro  </Text>
-          <Text style={styles.campoValor}>{Number(item.odometro).toLocaleString('es-MX')} km</Text>
+          <Text style={styles.campoValor}>{Number(item.odometro).toLocaleString('es-MX')} mi</Text>
         </View>
       )}
 
@@ -271,6 +271,10 @@ export default function AdminView({ showToast }) {
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
+
+  // Al cambiar los filtros se vuelve a la primera página.
+  useEffect(() => { setVisibleCount(POR_PAGINA); }, [filtro, filtroFecha]);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -305,6 +309,7 @@ export default function AdminView({ showToast }) {
     (filtro === 'Todos' || displayEstatus(s) === filtro) &&
     dentroDeRango(s.fechahora, filtroFecha)
   );
+  const visibles = lista.slice(0, visibleCount);
 
   return (
     <View style={styles.container}>
@@ -338,13 +343,23 @@ export default function AdminView({ showToast }) {
       )}
 
       <FlatList
-        data={lista}
+        data={visibles}
         keyExtractor={(item) => String(item.idserviciomovil)}
         renderItem={({ item }) => (
           <SolicitudItem item={item} onActualizar={handleActualizar} onPago={handlePago} onToast={showToast} />
         )}
         scrollEnabled={false}
       />
+
+      {lista.length > visibleCount && (
+        <TouchableOpacity
+          style={styles.btnVerMas}
+          onPress={() => setVisibleCount((c) => c + POR_PAGINA)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.btnVerMasText}>Ver más solicitudes ({lista.length - visibleCount})</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -381,12 +396,12 @@ const styles = StyleSheet.create({
   selectTrigger: { flexDirection: 'row', alignItems: 'center' },
   monoText: { fontFamily: mono, fontSize: 14, color: INK, flex: 1 },
   selectCaret: { fontFamily: sans, fontSize: 14, color: INK, marginLeft: 8 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  // Diálogo centrado (no bottom sheet: abajo interfiere con la barra de navegación del teléfono)
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 36 },
   sheet: {
-    backgroundColor: PAPER, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: 320, paddingBottom: 12, overflow: 'hidden',
+    backgroundColor: PAPER, borderRadius: 20,
+    maxHeight: 380, paddingVertical: 6, overflow: 'hidden', ...CARD_SHADOW,
   },
-  sheetGrabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: RULE, marginTop: 8, marginBottom: 4 },
   sheetDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: RULE },
   sheetOption: { paddingHorizontal: 20, paddingVertical: 14 },
   sheetOptionText: { fontFamily: mono, fontSize: 14, color: INK },
@@ -450,6 +465,16 @@ const styles = StyleSheet.create({
   btnRechazarText: {
     fontFamily: sans, color: INK, fontWeight: '700',
     fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
+  },
+
+  // Botón "ver más solicitudes" (paginación cliente)
+  btnVerMas: {
+    backgroundColor: PAPER_TINT, borderRadius: 14, paddingVertical: 13,
+    alignItems: 'center', marginTop: 4, marginBottom: 12,
+  },
+  btnVerMasText: {
+    fontFamily: sans, fontSize: 10, letterSpacing: 2,
+    textTransform: 'uppercase', fontWeight: '700', color: INK,
   },
 
   // Error / vacío

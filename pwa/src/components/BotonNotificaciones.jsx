@@ -26,7 +26,7 @@ export default function BotonNotificaciones({ showToast }) {
     }
   };
 
-  if (estado === 'cargando' || estado === 'no-soportado') return null;
+  if (estado === 'cargando' || estado === 'no-soportado' || estado === 'activo') return null;
 
   if (estado === 'ios-no-instalado') {
     return (
@@ -38,10 +38,6 @@ export default function BotonNotificaciones({ showToast }) {
   if (estado === 'bloqueado') {
     return <div className="notif-banner">Notificaciones bloqueadas. Actívalas en los ajustes del navegador.</div>;
   }
-  if (estado === 'activo') {
-    return <div className="notif-banner notif-banner--ok">✓ Notificaciones activadas en este dispositivo.</div>;
-  }
-
   return (
     <button className="btn-notif" onClick={activar} disabled={trabajando}>
       {trabajando ? 'Activando...' : 'Activar notificaciones'}

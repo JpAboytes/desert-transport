@@ -17,6 +17,7 @@ const ESTATUS_LABEL = {
 
 const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', 'Últimos 7 días', 'Últimos 30 días'];
+const POR_PAGINA = 10;
 
 // slug para la clase CSS del badge ('En proceso' -> 'en-proceso')
 const estatusSlug = (e) => e.toLowerCase().replace(/\s+/g, '-');
@@ -39,7 +40,8 @@ function FotosColapsables({ fotos }) {
   const [abierto, setAbierto] = useState(false);
   if (!fotos?.length) return null;
   return (
-    <div className="fotos-colapsables">
+    // stopPropagation: la tarjeta del admin abre el modal de detalle al hacer clic
+    <div className="fotos-colapsables" onClick={(e) => e.stopPropagation()}>
       <button type="button" className="fotos-toggle" onClick={() => setAbierto((a) => !a)}>
         {abierto ? 'Ocultar imágenes' : `Ver imágenes (${fotos.length})`}
       </button>
@@ -79,7 +81,90 @@ function formatFecha(raw) {
   return d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function SolicitudRow({ s, onActualizar, onPago, onToast }) {
+// Etiqueta de la decisión de pago (solo aplica a tickets cerrados).
+const pagoLabel = (s) => {
+  if (s.autorizacionpago === 1) return 'Autorizado';
+  if (s.autorizacionpago === 0) return 'Rechazado';
+  return 'Pendiente';
+};
+
+function Dato({ label, children }) {
+  return (
+    <div className="detalle-dato">
+      <span className="solicitud__field-label">{label}</span>
+      <span className="detalle-dato__valor">{children}</span>
+    </div>
+  );
+}
+
+// Modal con el detalle completo de una solicitud (se abre al hacer clic en la tarjeta).
+function DetalleSolicitud({ s, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const est = displayEstatus(s);
+
+  return (
+    <div className="detalle-modal" onClick={onClose}>
+      <div className="detalle-modal__card" onClick={(e) => e.stopPropagation()}>
+        <div className="detalle-modal__header">
+          <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
+          <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(est)}`}>
+            {ESTATUS_LABEL[est] ?? est}
+          </span>
+          {s.PO != null && <span className="po-box">PO {s.PO}</span>}
+          <button type="button" className="detalle-modal__cerrar" onClick={onClose} aria-label="Cerrar">✕</button>
+        </div>
+
+        <div className="detalle-modal__grid">
+          <Dato label="Solicitante">{s.nombresolicitante}</Dato>
+          {s.nombreaprobador && (
+            <Dato label={s.estatus === 'Rechazado' ? 'Rechazado por' : 'Autorizado por'}>
+              {s.nombreaprobador}
+            </Dato>
+          )}
+          <Dato label="Tipo de unidad">{s.tunidad}</Dato>
+          <Dato label="No. económico">{s.numeconomico}</Dato>
+          <Dato label="Fecha de solicitud">{formatFecha(s.fechahora)}</Dato>
+          {s.fechacierre && <Dato label="Fecha de cierre">{formatFecha(s.fechacierre)}</Dato>}
+          {s.odometro != null && (
+            <Dato label="Odómetro">{Number(s.odometro).toLocaleString('es-MX')} mi</Dato>
+          )}
+          <Dato label="Costo estimado">{money(s.costo)}</Dato>
+          {s.costoreal != null && <Dato label="Costo real">{money(s.costoreal)}</Dato>}
+          {s.estatus === 'Reparado' && <Dato label="Pago">{pagoLabel(s)}</Dato>}
+        </div>
+
+        <div className="detalle-dato detalle-dato--full">
+          <span className="solicitud__field-label">Descripción</span>
+          <span className="detalle-dato__valor">{s.descripcion}</span>
+        </div>
+
+        {s.fotos?.length > 0 && (
+          <div className="solicitud__fotos">
+            {['Apertura', 'Cierre'].map((tipo) => {
+              const fs = s.fotos.filter((f) => f.tipo === tipo);
+              if (fs.length === 0) return null;
+              return (
+                <div key={tipo} className="solicitud__foto-col">
+                  <span className="solicitud__field-label">{tipo}</span>
+                  <div className="solicitud__fotos-row">
+                    {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={72} />)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
   const [loading, setLoading] = useState(null);
   const est = displayEstatus(s);
 
@@ -107,7 +192,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
   };
 
   return (
-    <div className="solicitud">
+    <div className="solicitud solicitud--clickable" onClick={() => onVerDetalle(s)}>
       <div className="solicitud__header">
         <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
         <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(est)}`}>
@@ -132,7 +217,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
       {s.odometro != null && (
         <div className="solicitud__field">
           <span className="solicitud__field-label">Odómetro</span>
-          {Number(s.odometro).toLocaleString('es-MX')} km
+          {Number(s.odometro).toLocaleString('es-MX')} mi
         </div>
       )}
 
@@ -156,7 +241,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
       <FotosColapsables fotos={s.fotos} />
 
       {s.estatus === 'Pendiente' && (
-        <div className="solicitud__actions">
+        <div className="solicitud__actions" onClick={(e) => e.stopPropagation()}>
           <button
             className="btn-accion btn-accion--aprobar"
             onClick={() => handleEstatus('En proceso', 'autorizada')}
@@ -175,7 +260,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast }) {
       )}
 
       {est === 'Reparado' && (
-        <div className="solicitud__actions">
+        <div className="solicitud__actions" onClick={(e) => e.stopPropagation()}>
           <button
             className="btn-accion btn-accion--aprobar"
             onClick={() => handlePago(true)}
@@ -203,7 +288,12 @@ export default function AdminView() {
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
   const [tab, setTab] = useState('solicitudes');
+  const [detalleId, setDetalleId] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
   const { toast, showToast, hideToast } = useToast();
+
+  // Al cambiar los filtros se vuelve a la primera página.
+  useEffect(() => { setVisibleCount(POR_PAGINA); }, [filtro, filtroFecha]);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -244,10 +334,14 @@ export default function AdminView() {
     }
   };
 
+  // El modal guarda solo el id: así el detalle se refresca si la solicitud cambia.
+  const detalle = solicitudes.find((s) => s.idserviciomovil === detalleId);
+
   const lista = solicitudes.filter((s) =>
     (filtro === 'Todos' || displayEstatus(s) === filtro) &&
     dentroDeRango(s.fechahora, filtroFecha)
   );
+  const visibles = lista.slice(0, visibleCount);
 
   return (
     <div>
@@ -302,12 +396,27 @@ export default function AdminView() {
       )}
 
       <div className="solicitudes-lista">
-        {lista.map((s) => (
-          <SolicitudRow key={s.idserviciomovil} s={s} onActualizar={handleActualizar} onPago={handlePago} onToast={showToast} />
+        {visibles.map((s) => (
+          <SolicitudRow
+            key={s.idserviciomovil}
+            s={s}
+            onActualizar={handleActualizar}
+            onPago={handlePago}
+            onToast={showToast}
+            onVerDetalle={(sol) => setDetalleId(sol.idserviciomovil)}
+          />
         ))}
       </div>
+
+      {lista.length > visibleCount && (
+        <button type="button" className="btn-ver-mas" onClick={() => setVisibleCount((c) => c + POR_PAGINA)}>
+          Ver más solicitudes ({lista.length - visibleCount})
+        </button>
+      )}
         </>
       )}
+
+      {detalle && <DetalleSolicitud s={detalle} onClose={() => setDetalleId(null)} />}
     </div>
   );
 }

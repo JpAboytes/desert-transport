@@ -846,6 +846,87 @@ body {
   cursor: pointer;
 }
 
+/* ── Botón "ver más solicitudes" (paginación cliente) ── */
+.btn-ver-mas {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--paper-tint);
+  color: var(--ink);
+  border: none;
+  border-radius: 14px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.btn-ver-mas:hover { background: var(--ink); color: var(--paper); }
+
+/* ── Modal de detalle de solicitud (admin) ── */
+.solicitud--clickable { cursor: pointer; }
+
+.detalle-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.detalle-modal__card {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 12px 32px rgba(10, 10, 10, 0.25);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.detalle-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.detalle-modal__cerrar {
+  margin-left: auto;
+  border: none;
+  background: var(--paper-tint);
+  color: var(--ink);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.detalle-modal__cerrar:hover { background: var(--ink); color: var(--paper); }
+
+.detalle-modal__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.detalle-dato { display: flex; flex-direction: column; gap: 0.15rem; }
+.detalle-dato--full { margin-bottom: 0.75rem; }
+.detalle-dato__valor {
+  font-family: Georgia, serif;
+  font-size: 0.9rem;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
 .foto-modal {
   position: fixed;
   inset: 0;
