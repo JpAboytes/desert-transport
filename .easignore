@@ -1,0 +1,55 @@
+# Qué excluir del paquete que EAS sube al build server.
+# OJO: cuando este archivo existe, EAS lo usa EN LUGAR de .gitignore.
+# Es igual a .gitignore EXCEPTO que NO excluye la config de Expo
+# (expo-app/app.json, app.config.js y google-services.json son
+# indispensables para el build aunque no se versionen en git).
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build outputs
+dist/
+out/
+
+# Lambda (no aplica al build móvil)
+lambda/
+
+# Docs
+/docs
+
+# Expo
+.expo/
+.expo-shared/
+expo-app/android/
+expo-app/ios/
+
+# PWA (no aplica al build móvil)
+pwa/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Artefactos/secretos de despliegue prod
+.deploy-prod/

@@ -16,6 +16,7 @@ const BROWN   = '#553111';
 const INK_MID = '#444444';
 const RULE    = '#bbbbbb';
 const PAPER   = '#ffffff';
+const PAPER_TINT = '#f2f1ee';
 
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 const sans  = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
@@ -138,10 +139,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 2,
   },
   logoutBtn: {
-    fontFamily: sans, fontSize: 10, color: INK,
-    letterSpacing: 1.5, textTransform: 'uppercase',
+    fontFamily: sans, fontSize: 8.5, color: INK,
+    letterSpacing: 1, textTransform: 'uppercase',
     backgroundColor: PAPER_TINT, borderRadius: 999,
-    paddingHorizontal: 14, paddingVertical: 7, overflow: 'hidden',
+    paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden',
   },
 
   scroll:    { flex: 1 },

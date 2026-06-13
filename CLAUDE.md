@@ -39,7 +39,8 @@ dessert/
 
 - **Backend**: AWS API Gateway **HTTP API** → Lambdas. Región **us-east-2**.
   - Base URL: `https://ui7sns7rxj.execute-api.us-east-2.amazonaws.com`
-- **Base de datos**: MySQL, schema **`movil`** (RDS). Conexión por `mysql2/promise` con
+- **Base de datos**: MySQL, schema **`desert2018`** (antes `movil`; el nombre va hardcodeado en
+  el `dbConfig` de cada lambda). Conexión por `mysql2/promise` con
   `ssl: { rejectUnauthorized: false }`. Credenciales por env vars (`DB_HOST`, `DB_PORT`,
   `DB_USER`, `DB_PASSWORD`).
 - **Auth**: JWT (`jsonwebtoken`), secret en env `JWT_SECRET`, expira en 8h. El payload lleva

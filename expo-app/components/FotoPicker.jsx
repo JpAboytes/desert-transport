@@ -5,6 +5,7 @@ const INK = '#0a0a0a';
 const INK_LIGHT = '#888888';
 const RULE = '#bbbbbb';
 const PAPER = '#ffffff';
+const PAPER_TINT = '#f2f1ee';
 const sans = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
 
 // Selector de varias fotos (cámara o galería). `fotos` = arreglo de uris locales.
