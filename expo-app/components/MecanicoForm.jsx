@@ -13,6 +13,9 @@ const INK        = '#0a0a0a';
 const BRAND      = '#046738';
 const BROWN      = '#553111';
 const RED        = '#C0202A';
+const WARNING    = '#E6A100';
+const NEUTRAL    = '#737373';
+const LIME       = '#84CC16';
 const INK_MID    = '#444444';
 const INK_LIGHT  = '#888888';
 const RULE       = '#bbbbbb';
@@ -688,9 +691,9 @@ const styles = StyleSheet.create({
 
   estatusBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   estatusText:  { fontFamily: sans, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '700' },
-  estatusPendiente:  { borderColor: INK, color: INK },
-  estatusProceso:    { borderColor: INK, color: INK },
-  estatusReparado:   { borderColor: INK, color: INK },
+  estatusPendiente:  { borderColor: NEUTRAL, color: PAPER, backgroundColor: NEUTRAL },
+  estatusProceso:    { borderColor: WARNING, color: INK, backgroundColor: WARNING },
+  estatusReparado:   { borderColor: LIME, color: INK, backgroundColor: LIME },
   estatusPagado:     { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
   estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 

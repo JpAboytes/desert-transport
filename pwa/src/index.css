@@ -11,6 +11,9 @@
   --brand-dark: #03512b;
   --brown:      #553111;
   --danger:     #C0202A;
+  --warning:    #E6A100;
+  --neutral:    #737373;
+  --lime:       #84CC16;
   --ink:        #0a0a0a;
   --ink-mid:    #444444;
   --ink-light:  #888888;
@@ -968,10 +971,10 @@ body {
   cursor: pointer;
 }
 
-.solicitud__estatus--pendiente       { color: var(--ink); }
+.solicitud__estatus--pendiente       { color: var(--paper); background: var(--neutral); border-color: var(--neutral); }
 .solicitud__estatus--autorizado      { color: var(--ink); }
-.solicitud__estatus--en-proceso      { color: var(--ink); }
-.solicitud__estatus--reparado        { color: var(--ink); }
+.solicitud__estatus--en-proceso      { color: var(--ink); background: var(--warning); border-color: var(--warning); }
+.solicitud__estatus--reparado        { color: var(--ink); background: var(--lime);    border-color: var(--lime); }
 .solicitud__estatus--pagado          { color: var(--paper); background: var(--brand);  border-color: var(--brand); }
 .solicitud__estatus--rechazado       { color: var(--paper); background: var(--danger); border-color: var(--danger); }
 .solicitud__estatus--pago-rechazado  { color: var(--paper); background: var(--danger); border-color: var(--danger); }
