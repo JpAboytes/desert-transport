@@ -4,6 +4,7 @@ import { subirFotos } from '../services/uploads';
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
 import FotoPicker from '../components/FotoPicker';
+import BotonNotificaciones from '../components/BotonNotificaciones';
 import { useToast } from '../hooks/useToast';
 
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
@@ -330,6 +331,8 @@ export default function MecanicoForm({ user }) {
   return (
     <>
       <Toast message={toast.message} type={toast.type} onDismiss={hideToast} />
+
+      <BotonNotificaciones showToast={showToast} />
 
       {/* ── Pestañas ── */}
       <div className="segmented">
