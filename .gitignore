@@ -57,3 +57,7 @@ expo-app/app.json
 
 # Artefactos/secretos de despliegue prod (JWT, VAPID privada, env vars) — NUNCA versionar
 .deploy-prod/
+
+# Service account de Google Play (EAS Submit) — NUNCA versionar
+expo-app/play-service-account.json
+**/play-service-account.json

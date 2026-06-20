@@ -19,12 +19,29 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "APP_ENV": "production"
+      },
       "android": {
         "buildType": "apk"
+      }
+    },
+    "production-play": {
+      "autoIncrement": true,
+      "env": {
+        "APP_ENV": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }
