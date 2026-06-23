@@ -44,14 +44,24 @@ function etiquetaPeriodo(tipo, { inicio, fin }) {
   return `${f(inicio)} — ${f(ultimo)} ${ultimo.getFullYear()}`;
 }
 
+// Hora de pared: interpreta el DATETIME guardado tal cual, SIN convertir zona horaria.
+function parseWall(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+}
+
 const enPeriodo = (raw, { inicio, fin }) => {
-  if (!raw) return false;
-  const f = new Date(raw);
+  const f = parseWall(raw);
+  if (!f) return false;
   return f >= inicio && f < fin;
 };
 
-const formatFechaCorta = (raw) =>
-  raw ? new Date(raw).toLocaleDateString('es-MX', { dateStyle: 'short' }) : '—';
+const formatFechaCorta = (raw) => {
+  const d = parseWall(raw);
+  return d ? d.toLocaleDateString('es-MX', { dateStyle: 'short' }) : '—';
+};
 
 // ── Reporte 1: KPIs de tickets por estatus ────────────────────
 function ReporteKpis({ solicitudes, rango }) {
@@ -97,7 +107,7 @@ function ReporteKpis({ solicitudes, rango }) {
 function ReporteCuentasPorPagar({ solicitudes, rango }) {
   const pagados = solicitudes
     .filter((s) => s.autorizacionpago === 1 && enPeriodo(s.fechacierre, rango))
-    .sort((a, b) => new Date(a.fechacierre) - new Date(b.fechacierre));
+    .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
 
   const totalMonto = pagados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
 

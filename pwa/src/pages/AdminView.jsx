@@ -26,8 +26,8 @@ const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigi
 // Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
 function dentroDeRango(raw, rango) {
   if (rango === 'Todo') return true;
-  if (!raw) return false;
-  const f = new Date(raw);
+  const f = parseWall(raw);
+  if (!f) return false;
   if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
   const dias = rango === 'Últimos 7 días' ? 7 : 30;
   const limite = new Date();
@@ -75,10 +75,18 @@ const displayEstatus = (s) => {
   return s.estatus;
 };
 
+// Hora de pared: interpreta el DATETIME guardado tal cual, SIN convertir zona horaria.
+// Acepta "2026-06-22 11:36:00" o el ISO con 'Z' que serializa el backend.
+function parseWall(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+}
+
 function formatFecha(raw) {
-  if (!raw) return '—';
-  const d = new Date(raw);
-  return d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const d = parseWall(raw);
+  return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 }
 
 // Etiqueta de la decisión de pago (solo aplica a tickets cerrados).
