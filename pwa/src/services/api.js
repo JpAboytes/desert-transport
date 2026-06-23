@@ -11,6 +11,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Si el backend responde 401 (token vencido o inválido), cierra la sesión y manda a login.
+// Cubre el caso de que el token expire con la app abierta; el guard de ruta cubre el arranque.
+// Excepción: el propio /login responde 401 con credenciales malas — ahí ya estamos en '/'.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && window.location.pathname !== '/') {
+      localStorage.clear();
+      window.location.replace('/');
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const loginRequest = (usuario, password) =>
   api.post('/login', { usuario, password });
 
