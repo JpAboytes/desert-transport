@@ -975,7 +975,7 @@ body {
 .solicitud__estatus--autorizado      { color: var(--ink); }
 .solicitud__estatus--en-proceso      { color: var(--ink); background: var(--warning); border-color: var(--warning); }
 .solicitud__estatus--reparado        { color: var(--ink); background: var(--lime);    border-color: var(--lime); }
-.solicitud__estatus--pagado          { color: var(--paper); background: var(--brand);  border-color: var(--brand); }
+.solicitud__estatus--pago-autorizado { color: var(--paper); background: var(--brand);  border-color: var(--brand); }
 .solicitud__estatus--rechazado       { color: var(--paper); background: var(--danger); border-color: var(--danger); }
 .solicitud__estatus--pago-rechazado  { color: var(--paper); background: var(--danger); border-color: var(--danger); }
 

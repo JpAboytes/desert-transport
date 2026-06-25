@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSolicitudes } from '../services/api';
 
 const TIPOS_PERIODO = ['Semanal', 'Mensual'];
-const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
-// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pago autorizado'; 0 = 'Pago rechazado').
 const displayEstatus = (s) => {
   if (s.estatus === 'Reparado') {
-    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 1) return 'Pago autorizado';
     if (s.autorizacionpago === 0) return 'Pago rechazado';
   }
   return s.estatus;
@@ -105,22 +105,22 @@ function ReporteKpis({ solicitudes, rango }) {
 // determina por la fecha de cierre de la reparación (no hay timestamp de
 // la decisión de pago en la BD).
 function ReporteCuentasPorPagar({ solicitudes, rango }) {
-  const pagados = solicitudes
+  const pagosAutorizados = solicitudes
     .filter((s) => s.autorizacionpago === 1 && enPeriodo(s.fechacierre, rango))
     .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
 
-  const totalMonto = pagados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+  const totalMonto = pagosAutorizados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
 
   return (
     <section className="reporte">
       <h3 className="reporte__titulo">Cuentas por pagar</h3>
       <p className="reporte__nota">Pagos autorizados · por fecha de cierre · costo real</p>
 
-      {pagados.length === 0 && (
+      {pagosAutorizados.length === 0 && (
         <p className="admin-estado">Sin pagos autorizados en este periodo.</p>
       )}
 
-      {pagados.map((s) => (
+      {pagosAutorizados.map((s) => (
         <div key={s.idserviciomovil} className="cxp-row">
           <div className="cxp-row__info">
             <span className="cxp-row__id">
@@ -134,10 +134,10 @@ function ReporteCuentasPorPagar({ solicitudes, rango }) {
         </div>
       ))}
 
-      {pagados.length > 0 && (
+      {pagosAutorizados.length > 0 && (
         <div className="cxp-total">
           <span className="cxp-total__label">
-            Total ({pagados.length} {pagados.length === 1 ? 'ticket' : 'tickets'})
+            Total ({pagosAutorizados.length} {pagosAutorizados.length === 1 ? 'ticket' : 'tickets'})
           </span>
           <span className="cxp-total__monto">{money(totalMonto)}</span>
         </div>

@@ -9,7 +9,7 @@ import { useToast } from '../hooks/useToast';
 
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
-const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', 'Últimos 7 días', 'Últimos 30 días'];
 const POR_PAGINA   = 10;
 
@@ -47,10 +47,10 @@ function FotosColapsables({ fotos }) {
 }
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
-// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pago autorizado'; 0 = 'Pago rechazado').
 const displayEstatus = (s) => {
   if (s.estatus === 'Reparado') {
-    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 1) return 'Pago autorizado';
     if (s.autorizacionpago === 0) return 'Pago rechazado';
   }
   return s.estatus;
