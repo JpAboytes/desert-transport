@@ -173,11 +173,14 @@ export const handler = async (event) => {
         `SELECT s.idserviciomovil, s.estatus, s.tunidad, s.odometro,
                 s.numeconomico, s.descripcion, s.costo, s.costoreal,
                 s.fechahora, s.fechacierre, s.autorizacionpago, s.PO,
+                s.idpagador, s.comentariorechazo,
                 us.nombre AS nombresolicitante,
-                ua.nombre AS nombreaprobador
+                ua.nombre AS nombreaprobador,
+                up.nombre AS nombrepagador
          FROM serviciomovil s
          JOIN  usuario us ON us.idusuario = s.idsolicitante
          LEFT JOIN usuario ua ON ua.idusuario = s.idaprobador
+         LEFT JOIN usuario up ON up.idusuario = s.idpagador
          ORDER BY s.fechahora DESC`
       );
       await adjuntarFotos(connection, rows);
@@ -209,6 +212,11 @@ export const handler = async (event) => {
     // Solo aplica a un ticket 'Reparado' que aún no tiene decisión de pago.
     if (Object.prototype.hasOwnProperty.call(body, 'autorizacionPago')) {
       const aprobado = body.autorizacionPago === true || body.autorizacionPago === 1;
+      // Al rechazar el pago el comentario es OBLIGATORIO (lo verá el mecánico).
+      const comentario = typeof body.comentarioRechazo === 'string' ? body.comentarioRechazo.trim() : '';
+      if (!aprobado && !comentario) {
+        return resp(400, { success: false, message: 'El comentario es obligatorio para rechazar el pago' });
+      }
       let connection;
       try {
         connection = await mysql.createConnection(dbConfig());
@@ -226,9 +234,11 @@ export const handler = async (event) => {
           return resp(409, { success: false, message: 'El pago de este ticket ya fue autorizado' });
         }
 
+        // Guarda quién decidió el pago (idpagador) y, si se rechaza, el comentario.
+        // Al autorizar se limpia el comentario (p. ej. al corregir un pago rechazado).
         await connection.execute(
-          'UPDATE serviciomovil SET autorizacionpago = ? WHERE idserviciomovil = ?',
-          [aprobado ? 1 : 0, id]
+          'UPDATE serviciomovil SET autorizacionpago = ?, idpagador = ?, comentariorechazo = ? WHERE idserviciomovil = ?',
+          [aprobado ? 1 : 0, decoded.idusuario, aprobado ? null : comentario.slice(0, 500), id]
         );
 
         // Al AUTORIZAR el pago, registra el monto en la fila de servicio detallado:

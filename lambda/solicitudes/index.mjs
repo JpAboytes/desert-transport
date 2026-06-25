@@ -242,11 +242,14 @@ export const handler = async (event) => {
         `SELECT s.idserviciomovil, s.estatus, s.tunidad, s.odometro,
                 s.numeconomico, s.descripcion, s.costo, s.costoreal,
                 s.fechahora, s.fechacierre, s.autorizacionpago, s.PO,
+                s.comentariorechazo,
                 us.nombre AS nombresolicitante,
-                ua.nombre AS nombreaprobador
+                ua.nombre AS nombreaprobador,
+                up.nombre AS nombrepagador
          FROM serviciomovil s
          JOIN  usuario us ON us.idusuario = s.idsolicitante
          LEFT JOIN usuario ua ON ua.idusuario = s.idaprobador
+         LEFT JOIN usuario up ON up.idusuario = s.idpagador
          WHERE s.idsolicitante = ?
          ORDER BY s.fechahora DESC`,
         [decoded.idusuario]

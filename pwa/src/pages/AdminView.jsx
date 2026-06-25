@@ -174,6 +174,8 @@ function DetalleSolicitud({ s, onClose }) {
 
 function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
   const [loading, setLoading] = useState(null);
+  const [rechazoOpen, setRechazoOpen] = useState(false);
+  const [comentario, setComentario] = useState('');
   const est = displayEstatus(s);
 
   const handleEstatus = async (estatus, etiqueta) => {
@@ -187,16 +189,24 @@ function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
     setLoading(null);
   };
 
-  const handlePago = async (aprobado) => {
+  const handlePago = async (aprobado, comentarioRechazo) => {
     const key = aprobado ? 'pago-si' : 'pago-no';
     setLoading(key);
     try {
-      await onPago(s.idserviciomovil, aprobado);
+      await onPago(s.idserviciomovil, aprobado, comentarioRechazo);
       onToast(`Pago de #${String(s.idserviciomovil)} ${aprobado ? 'autorizado' : 'rechazado'}`);
     } catch (e) {
       onToast(e?.response?.data?.message || 'Error al registrar el pago', 'error');
     }
     setLoading(null);
+  };
+
+  const confirmarRechazo = async () => {
+    const txt = comentario.trim();
+    if (!txt) return;
+    await handlePago(false, txt);
+    setRechazoOpen(false);
+    setComentario('');
   };
 
   return (
@@ -278,7 +288,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
           </button>
           <button
             className="btn-accion btn-accion--rechazar"
-            onClick={() => handlePago(false)}
+            onClick={() => setRechazoOpen(true)}
             disabled={!!loading}
           >
             {loading === 'pago-no' ? '...' : 'Rechazar pago'}
@@ -296,6 +306,43 @@ function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
           >
             {loading === 'pago-si' ? '...' : 'Autorizar pago'}
           </button>
+        </div>
+      )}
+
+      {/* Modal de confirmación de rechazo de pago con comentario obligatorio. */}
+      {rechazoOpen && (
+        <div className="detalle-modal" onClick={(e) => { e.stopPropagation(); setRechazoOpen(false); setComentario(''); }}>
+          <div className="detalle-modal__card" onClick={(e) => e.stopPropagation()}>
+            <div className="detalle-modal__header">
+              <span className="solicitud__id">Rechazar pago · #{String(s.idserviciomovil)}</span>
+            </div>
+            <p className="admin-estado" style={{ marginBottom: 12 }}>
+              ¿Seguro que quieres rechazar el pago? Deja un comentario para el mecánico (obligatorio).
+            </p>
+            <textarea
+              className="form-input"
+              rows={4}
+              placeholder="Motivo del rechazo…"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+            />
+            <div className="solicitud__actions" style={{ marginTop: 14 }}>
+              <button
+                className="btn-accion"
+                onClick={() => { setRechazoOpen(false); setComentario(''); }}
+                disabled={!!loading}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-accion btn-accion--rechazar"
+                disabled={!comentario.trim() || !!loading}
+                onClick={confirmarRechazo}
+              >
+                {loading === 'pago-no' ? '...' : 'Confirmar rechazo'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -343,11 +390,13 @@ export default function AdminView() {
     }
   };
 
-  const handlePago = async (id, aprobado) => {
+  const handlePago = async (id, aprobado, comentarioRechazo) => {
     try {
-      await autorizarPago(id, aprobado);
+      await autorizarPago(id, aprobado, comentarioRechazo);
       setSolicitudes((prev) =>
-        prev.map((s) => s.idserviciomovil === id ? { ...s, autorizacionpago: aprobado ? 1 : 0 } : s)
+        prev.map((s) => s.idserviciomovil === id
+          ? { ...s, autorizacionpago: aprobado ? 1 : 0, comentariorechazo: aprobado ? null : comentarioRechazo }
+          : s)
       );
     } catch (e) {
       cargar();

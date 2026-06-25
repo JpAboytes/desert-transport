@@ -47,8 +47,9 @@ export const suscribirPush = (subscription) =>
   api.post('/push/subscribe', subscription);
 
 // Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).
-export const autorizarPago = (id, autorizacionPago) =>
-  api.patch(`/admin/solicitudes/${id}`, { autorizacionPago });
+// Al rechazar, comentarioRechazo es obligatorio (lo verá el mecánico).
+export const autorizarPago = (id, autorizacionPago, comentarioRechazo) =>
+  api.patch(`/admin/solicitudes/${id}`, { autorizacionPago, comentarioRechazo });
 
 export const getSolicitudes = () =>
   api.get('/admin/solicitudes');
