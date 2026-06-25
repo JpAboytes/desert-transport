@@ -1,0 +1,14 @@
+{
+  "name": "lambda-unidades",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda para catálogo de unidades — transporte app",
+  "main": "index.mjs",
+  "scripts": {
+    "zip": "zip -r ../unidades.zip index.mjs package.json node_modules"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0"
+  }
+}

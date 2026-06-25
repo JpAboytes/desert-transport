@@ -13,10 +13,10 @@ dist/
 build/
 out/
 
-# Lambda build artifacts
-lambda/
+# Lambda: se versiona el fuente (index.mjs, package.json, package-lock.json).
+# NO los artefactos de build (zips) ni node_modules (ya ignorado arriba).
 lambda/*.zip
-lambda/login/
+lambda/**/*.zip
 
 /docs
 

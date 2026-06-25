@@ -1,0 +1,15 @@
+{
+  "name": "lambda-admin",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda admin — listado y actualización de solicitudes",
+  "main": "index.mjs",
+  "scripts": {
+    "zip": "zip -r ../admin.zip index.mjs package.json node_modules"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0",
+    "web-push": "^3.6.7"
+  }
+}

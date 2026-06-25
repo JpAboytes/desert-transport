@@ -1,0 +1,14 @@
+{
+  "name": "lambda-login",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda de autenticación — transporte app",
+  "main": "index.mjs",
+  "scripts": {
+    "zip": "zip -r ../login.zip index.mjs package.json node_modules"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0"
+  }
+}
