@@ -22,7 +22,7 @@ const sans = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
 const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 const POR_PAGINA = 10;
 
@@ -41,10 +41,10 @@ function dentroDeRango(raw, rango) {
 }
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
-// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pago autorizado'; 0 = 'Pago rechazado').
 const displayEstatus = (s) => {
   if (s.estatus === 'Reparado') {
-    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 1) return 'Pago autorizado';
     if (s.autorizacionpago === 0) return 'Pago rechazado';
   }
   return s.estatus;
@@ -153,7 +153,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
     Pendiente:         styles.estatusPendiente,
     'En proceso':      styles.estatusProceso,
     Reparado:          styles.estatusReparado,
-    Pagado:            styles.estatusPagado,
+    'Pago autorizado': styles.estatusPagoAutorizado,
     Rechazado:         styles.estatusRechazado,
     'Pago rechazado':  styles.estatusRechazado,
   }[est] ?? {};
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   estatusPendiente:  { borderColor: NEUTRAL, color: PAPER, backgroundColor: NEUTRAL },
   estatusProceso:    { borderColor: WARNING, color: INK, backgroundColor: WARNING },
   estatusReparado:   { borderColor: LIME, color: INK, backgroundColor: LIME },
-  estatusPagado:     { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
+  estatusPagoAutorizado: { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
   estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 
   itemMeta: {

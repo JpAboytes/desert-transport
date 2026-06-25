@@ -18,15 +18,15 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const TIPOS_PERIODO = ['Semanal', 'Mensual'];
-const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pagado', 'Rechazado', 'Pago rechazado'];
+const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
 // Estatus para mostrar: el pago se deriva del booleano autorizacionpago
-// (NULL = esperando pago → 'Reparado'; 1 = 'Pagado'; 0 = 'Pago rechazado').
+// (NULL = esperando pago → 'Reparado'; 1 = 'Pago autorizado'; 0 = 'Pago rechazado').
 const displayEstatus = (s) => {
   if (s.estatus === 'Reparado') {
-    if (s.autorizacionpago === 1) return 'Pagado';
+    if (s.autorizacionpago === 1) return 'Pago autorizado';
     if (s.autorizacionpago === 0) return 'Pago rechazado';
   }
   return s.estatus;
@@ -112,22 +112,22 @@ function ReporteKpis({ solicitudes, rango }) {
 // determina por la fecha de cierre de la reparación (no hay timestamp de
 // la decisión de pago en la BD).
 function ReporteCuentasPorPagar({ solicitudes, rango }) {
-  const pagados = solicitudes
+  const pagosAutorizados = solicitudes
     .filter((s) => s.autorizacionpago === 1 && enPeriodo(s.fechacierre, rango))
     .sort((a, b) => new Date(a.fechacierre) - new Date(b.fechacierre));
 
-  const totalMonto = pagados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+  const totalMonto = pagosAutorizados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
 
   return (
     <View style={styles.reporte}>
       <Text style={styles.reporteTitulo}>Cuentas por pagar</Text>
       <Text style={styles.reporteNota}>Pagos autorizados · por fecha de cierre · costo real</Text>
 
-      {pagados.length === 0 && (
+      {pagosAutorizados.length === 0 && (
         <Text style={styles.empty}>Sin pagos autorizados en este periodo.</Text>
       )}
 
-      {pagados.map((s) => (
+      {pagosAutorizados.map((s) => (
         <View key={s.idserviciomovil} style={styles.cxpRow}>
           <View style={styles.cxpInfo}>
             <Text style={styles.cxpId}>
@@ -141,9 +141,9 @@ function ReporteCuentasPorPagar({ solicitudes, rango }) {
         </View>
       ))}
 
-      {pagados.length > 0 && (
+      {pagosAutorizados.length > 0 && (
         <View style={styles.cxpTotalRow}>
-          <Text style={styles.cxpTotalLabel}>Total ({pagados.length} {pagados.length === 1 ? 'ticket' : 'tickets'})</Text>
+          <Text style={styles.cxpTotalLabel}>Total ({pagosAutorizados.length} {pagosAutorizados.length === 1 ? 'ticket' : 'tickets'})</Text>
           <Text style={styles.cxpTotalMonto}>{money(totalMonto)}</Text>
         </View>
       )}
