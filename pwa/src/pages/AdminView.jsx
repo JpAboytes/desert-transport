@@ -285,6 +285,19 @@ function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
           </button>
         </div>
       )}
+
+      {/* Pago rechazado: permite corregir la decisión y autorizar el pago. */}
+      {est === 'Pago rechazado' && (
+        <div className="solicitud__actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            className="btn-accion btn-accion--aprobar"
+            onClick={() => handlePago(true)}
+            disabled={!!loading}
+          >
+            {loading === 'pago-si' ? '...' : 'Autorizar pago'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

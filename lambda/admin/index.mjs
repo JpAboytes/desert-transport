@@ -220,8 +220,10 @@ export const handler = async (event) => {
         if (cur[0].estatus !== 'Reparado') {
           return resp(409, { success: false, message: `El pago solo se decide sobre un ticket Reparado (actual: ${cur[0].estatus})` });
         }
-        if (cur[0].autorizacionpago !== null) {
-          return resp(409, { success: false, message: 'El pago de este ticket ya fue decidido' });
+        // Un pago AUTORIZADO (1) es terminal. Un pago RECHAZADO (0) se puede corregir
+        // y autorizar después (NULL = aún sin decidir).
+        if (cur[0].autorizacionpago === 1) {
+          return resp(409, { success: false, message: 'El pago de este ticket ya fue autorizado' });
         }
 
         await connection.execute(
