@@ -12,11 +12,12 @@ const ESTATUS_LABEL = {
   'En proceso':     'En proceso',
   Reparado:         'Reparado',
   'Pago autorizado':'Pago autorizado',
+  Pagado:           'Pagado',
   Rechazado:        'Rechazado',
   'Pago rechazado': 'Pago rechazado',
 };
 
-const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
+const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', 'Últimos 7 días', 'Últimos 30 días'];
 const POR_PAGINA = 10;
 

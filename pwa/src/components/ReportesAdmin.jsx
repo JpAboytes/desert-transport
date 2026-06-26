@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSolicitudes } from '../services/api';
+import { getSolicitudes, pagarSolicitud } from '../services/api';
 
 const TIPOS_PERIODO = ['Semanal', 'Mensual'];
-const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
+const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
@@ -104,12 +104,49 @@ function ReporteKpis({ solicitudes, rango }) {
 // Solo tickets con pago AUTORIZADO (autorizacionpago = 1). El periodo se
 // determina por la fecha de cierre de la reparación (no hay timestamp de
 // la decisión de pago en la BD).
-function ReporteCuentasPorPagar({ solicitudes, rango }) {
+function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
   const pagosAutorizados = solicitudes
-    .filter((s) => s.autorizacionpago === 1 && enPeriodo(s.fechacierre, rango))
+    .filter((s) => displayEstatus(s) === 'Pago autorizado' && enPeriodo(s.fechacierre, rango))
     .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
 
   const totalMonto = pagosAutorizados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+
+  const [seleccion, setSeleccion] = useState(() => new Set());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [comentario, setComentario] = useState('');
+  const [pagando, setPagando] = useState(false);
+  const [pagoError, setPagoError] = useState('');
+
+  const idsVisibles = pagosAutorizados.map((s) => s.idserviciomovil);
+  const allSelected = idsVisibles.length > 0 && idsVisibles.every((id) => seleccion.has(id));
+  const seleccionadas = pagosAutorizados.filter((s) => seleccion.has(s.idserviciomovil));
+  const totalSeleccion = seleccionadas.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+
+  const toggle = (id) => setSeleccion((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const toggleAll = () => setSeleccion(allSelected ? new Set() : new Set(idsVisibles));
+
+  const confirmarPago = async () => {
+    const ids = seleccionadas.map((s) => s.idserviciomovil);
+    if (ids.length === 0) return;
+    setPagando(true);
+    setPagoError('');
+    try {
+      const txt = comentario.trim();
+      await Promise.all(ids.map((id) => pagarSolicitud(id, txt || null)));
+      onPagados(ids, txt);
+      setSeleccion(new Set());
+      setModalOpen(false);
+      setComentario('');
+    } catch (e) {
+      setPagoError(e?.response?.data?.message || 'Error al registrar el pago.');
+    } finally {
+      setPagando(false);
+    }
+  };
 
   return (
     <section className="reporte">
@@ -120,8 +157,32 @@ function ReporteCuentasPorPagar({ solicitudes, rango }) {
         <p className="admin-estado">Sin pagos autorizados en este periodo.</p>
       )}
 
+      {pagosAutorizados.length > 0 && (
+        <div className="cxp-acciones">
+          <label className="cxp-selall">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+            Seleccionar todo
+          </label>
+          {seleccion.size > 0 && (
+            <button
+              type="button"
+              className="btn-accion btn-accion--aprobar"
+              onClick={() => { setPagoError(''); setModalOpen(true); }}
+            >
+              Pagar {seleccion.size} · {money(totalSeleccion)}
+            </button>
+          )}
+        </div>
+      )}
+
       {pagosAutorizados.map((s) => (
         <div key={s.idserviciomovil} className="cxp-row">
+          <input
+            type="checkbox"
+            className="cxp-row__check"
+            checked={seleccion.has(s.idserviciomovil)}
+            onChange={() => toggle(s.idserviciomovil)}
+          />
           <div className="cxp-row__info">
             <span className="cxp-row__id">
               #{String(s.idserviciomovil)}{s.PO != null ? `  ·  PO ${s.PO}` : ''}
@@ -140,6 +201,37 @@ function ReporteCuentasPorPagar({ solicitudes, rango }) {
             Total ({pagosAutorizados.length} {pagosAutorizados.length === 1 ? 'ticket' : 'tickets'})
           </span>
           <span className="cxp-total__monto">{money(totalMonto)}</span>
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="detalle-modal" onClick={() => !pagando && setModalOpen(false)}>
+          <div className="detalle-modal__card" onClick={(e) => e.stopPropagation()}>
+            <div className="detalle-modal__header">
+              <span className="solicitud__id">
+                Pagar {seleccionadas.length} {seleccionadas.length === 1 ? 'ticket' : 'tickets'} · {money(totalSeleccion)}
+              </span>
+            </div>
+            <p className="admin-estado" style={{ marginBottom: 12 }}>
+              Se marcarán como <strong>Pagado</strong> y saldrán de cuentas por pagar. Comentario (opcional):
+            </p>
+            <textarea
+              className="form-input"
+              rows={3}
+              placeholder="Comentario opcional…"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+            />
+            {pagoError && <div className="form-error" style={{ marginTop: 8 }}>{pagoError}</div>}
+            <div className="solicitud__actions" style={{ marginTop: 14 }}>
+              <button type="button" className="btn-accion" onClick={() => { setModalOpen(false); setComentario(''); }} disabled={pagando}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-accion btn-accion--aprobar" onClick={confirmarPago} disabled={pagando}>
+                {pagando ? '...' : 'Confirmar pago'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>
@@ -208,7 +300,14 @@ export default function ReportesAdmin() {
       {!loading && !error && (
         <>
           <ReporteKpis solicitudes={solicitudes} rango={rango} />
-          <ReporteCuentasPorPagar solicitudes={solicitudes} rango={rango} />
+          <ReporteCuentasPorPagar
+            solicitudes={solicitudes}
+            rango={rango}
+            onPagados={(ids, comentario) => setSolicitudes((prev) =>
+              prev.map((s) => ids.includes(s.idserviciomovil)
+                ? { ...s, estatus: 'Pagado', comentariocheckbox: comentario || null }
+                : s))}
+          />
         </>
       )}
     </div>

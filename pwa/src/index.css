@@ -701,6 +701,33 @@ body {
   color: var(--ink);
   white-space: nowrap;
 }
+.cxp-row__check {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--brand);
+}
+.cxp-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.75rem;
+}
+.cxp-selall {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+.cxp-selall input { accent-color: var(--brand); cursor: pointer; }
 .cxp-total {
   display: flex;
   align-items: center;
@@ -978,6 +1005,7 @@ body {
 .solicitud__estatus--pago-autorizado { color: var(--paper); background: var(--brand);  border-color: var(--brand); }
 .solicitud__estatus--rechazado       { color: var(--paper); background: var(--danger); border-color: var(--danger); }
 .solicitud__estatus--pago-rechazado  { color: var(--paper); background: var(--danger); border-color: var(--danger); }
+.solicitud__estatus--pagado          { color: var(--paper); background: var(--ink);    border-color: var(--ink); }
 
 .solicitud__meta {
   font-family: 'Helvetica Neue', Arial, sans-serif;

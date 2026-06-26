@@ -54,6 +54,10 @@ export const autorizarPago = (id, autorizacionPago, comentarioRechazo) =>
 export const getSolicitudes = () =>
   api.get('/admin/solicitudes');
 
+// Marca como pagado un ticket con pago autorizado (estatus -> 'Pagado'); comentario opcional.
+export const pagarSolicitud = (id, comentarioCheckbox) =>
+  api.patch(`/admin/solicitudes/${id}`, { pagar: true, comentarioCheckbox });
+
 export const actualizarEstatus = (id, estatus) =>
   api.patch(`/admin/solicitudes/${id}`, { estatus });
 

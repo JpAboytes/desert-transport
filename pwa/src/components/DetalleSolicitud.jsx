@@ -10,6 +10,7 @@ const ESTATUS_LABEL = {
   'En proceso':     'En proceso',
   Reparado:         'Reparado',
   'Pago autorizado':'Pago autorizado',
+  Pagado:           'Pagado',
   Rechazado:        'Rechazado',
   'Pago rechazado': 'Pago rechazado',
 };
@@ -113,6 +114,13 @@ export default function DetalleSolicitud({ s, onClose, onAutorizarPago }) {
           <div className="detalle-dato detalle-dato--full">
             <span className="solicitud__field-label">Motivo del rechazo de pago</span>
             <span className="detalle-dato__valor">{s.comentariorechazo}</span>
+          </div>
+        )}
+
+        {s.estatus === 'Pagado' && s.comentariocheckbox && (
+          <div className="detalle-dato detalle-dato--full">
+            <span className="solicitud__field-label">Comentario de pago</span>
+            <span className="detalle-dato__valor">{s.comentariocheckbox}</span>
           </div>
         )}
 

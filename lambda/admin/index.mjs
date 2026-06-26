@@ -173,7 +173,7 @@ export const handler = async (event) => {
         `SELECT s.idserviciomovil, s.estatus, s.tunidad, s.odometro,
                 s.numeconomico, s.descripcion, s.costo, s.costoreal,
                 s.fechahora, s.fechacierre, s.autorizacionpago, s.PO,
-                s.idpagador, s.comentariorechazo,
+                s.idpagador, s.comentariorechazo, s.comentariocheckbox,
                 us.nombre AS nombresolicitante,
                 ua.nombre AS nombreaprobador,
                 up.nombre AS nombrepagador
@@ -207,6 +207,35 @@ export const handler = async (event) => {
     body = body ?? {};
 
     const folio = String(id);
+
+    // ── Marcar como PAGADO: { pagar: true, comentarioCheckbox? } ───
+    // Solo sobre un ticket con pago AUTORIZADO (Reparado + autorizacionpago=1).
+    // estatus → 'Pagado' (sale de cuentas por pagar). Comentario opcional.
+    if (body.pagar === true) {
+      const comentario = typeof body.comentarioCheckbox === 'string' ? body.comentarioCheckbox.trim() : '';
+      let connection;
+      try {
+        connection = await mysql.createConnection(dbConfig());
+        const [cur] = await connection.execute(
+          'SELECT estatus, autorizacionpago FROM serviciomovil WHERE idserviciomovil = ?',
+          [id]
+        );
+        if (cur.length === 0) return resp(404, { success: false, message: 'Solicitud no encontrada' });
+        if (!(cur[0].estatus === 'Reparado' && cur[0].autorizacionpago === 1)) {
+          return resp(409, { success: false, message: 'Solo se puede pagar un ticket con pago autorizado' });
+        }
+        await connection.execute(
+          "UPDATE serviciomovil SET estatus = 'Pagado', comentariocheckbox = ? WHERE idserviciomovil = ?",
+          [comentario ? comentario.slice(0, 255) : null, id]
+        );
+        return resp(200, { success: true, message: 'Pago registrado' });
+      } catch (error) {
+        console.error('[admin] error pagar:', error?.code, '|', error?.sqlMessage ?? error?.message);
+        return resp(500, { success: false, message: error.message });
+      } finally {
+        if (connection) await connection.end().catch(() => {});
+      }
+    }
 
     // ── Decisión de pago: { autorizacionPago: true|false } ───
     // Solo aplica a un ticket 'Reparado' que aún no tiene decisión de pago.
