@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Modal, TextInput,
 } from 'react-native';
-import { getSolicitudes } from '../services/solicitudes';
+import { getSolicitudes, pagarSolicitud } from '../services/solicitudes';
 
 const INK        = '#0a0a0a';
 const BRAND      = '#046738';
+const RED        = '#C0202A';
 const BROWN      = '#553111';
 const INK_MID    = '#444444';
 const INK_LIGHT  = '#888888';
@@ -18,7 +19,7 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const TIPOS_PERIODO = ['Semanal', 'Mensual'];
-const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
+const ESTATUS_KPI = ['Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
@@ -60,14 +61,24 @@ function etiquetaPeriodo(tipo, { inicio, fin }) {
   return `${f(inicio)} — ${f(ultimo)} ${ultimo.getFullYear()}`;
 }
 
+// Hora de pared: interpreta el DATETIME guardado tal cual, SIN convertir zona horaria.
+function parseWall(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+}
+
 const enPeriodo = (raw, { inicio, fin }) => {
-  if (!raw) return false;
-  const f = new Date(raw);
+  const f = parseWall(raw);
+  if (!f) return false;
   return f >= inicio && f < fin;
 };
 
-const formatFechaCorta = (raw) =>
-  raw ? new Date(raw).toLocaleDateString('es-MX', { dateStyle: 'short' }) : '—';
+const formatFechaCorta = (raw) => {
+  const d = parseWall(raw);
+  return d ? d.toLocaleDateString('es-MX', { dateStyle: 'short' }) : '—';
+};
 
 // ── Reporte 1: KPIs de tickets por estatus ────────────────────
 function ReporteKpis({ solicitudes, rango }) {
@@ -111,42 +122,178 @@ function ReporteKpis({ solicitudes, rango }) {
 // Solo tickets con pago AUTORIZADO (autorizacionpago = 1). El periodo se
 // determina por la fecha de cierre de la reparación (no hay timestamp de
 // la decisión de pago en la BD).
-function ReporteCuentasPorPagar({ solicitudes, rango }) {
-  const pagosAutorizados = solicitudes
-    .filter((s) => s.autorizacionpago === 1 && enPeriodo(s.fechacierre, rango))
-    .sort((a, b) => new Date(a.fechacierre) - new Date(b.fechacierre));
+function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
+  const [vista, setVista] = useState('porPagar'); // 'porPagar' | 'pagadas'
 
-  const totalMonto = pagosAutorizados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+  const pagosAutorizados = solicitudes
+    .filter((s) => displayEstatus(s) === 'Pago autorizado' && enPeriodo(s.fechacierre, rango))
+    .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
+
+  const pagadas = solicitudes
+    .filter((s) => s.estatus === 'Pagado' && enPeriodo(s.fechacierre, rango))
+    .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
+
+  const lista = vista === 'porPagar' ? pagosAutorizados : pagadas;
+  const totalMonto = lista.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+
+  const [seleccion, setSeleccion] = useState(() => new Set());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [comentario, setComentario] = useState('');
+  const [pagando, setPagando] = useState(false);
+  const [pagoError, setPagoError] = useState('');
+
+  const idsVisibles = pagosAutorizados.map((s) => s.idserviciomovil);
+  const allSelected = idsVisibles.length > 0 && idsVisibles.every((id) => seleccion.has(id));
+  const seleccionadas = pagosAutorizados.filter((s) => seleccion.has(s.idserviciomovil));
+  const totalSeleccion = seleccionadas.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+
+  const toggle = (id) => setSeleccion((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const toggleAll = () => setSeleccion(allSelected ? new Set() : new Set(idsVisibles));
+
+  const confirmarPago = async () => {
+    const ids = seleccionadas.map((s) => s.idserviciomovil);
+    if (ids.length === 0) return;
+    setPagando(true);
+    setPagoError('');
+    try {
+      const txt = comentario.trim();
+      await Promise.all(ids.map((id) => pagarSolicitud(id, txt || null)));
+      onPagados(ids, txt);
+      setSeleccion(new Set());
+      setModalOpen(false);
+      setComentario('');
+    } catch (e) {
+      setPagoError(e?.response?.data?.message || 'Error al registrar el pago.');
+    } finally {
+      setPagando(false);
+    }
+  };
 
   return (
     <View style={styles.reporte}>
       <Text style={styles.reporteTitulo}>Cuentas por pagar</Text>
-      <Text style={styles.reporteNota}>Pagos autorizados · por fecha de cierre · costo real</Text>
 
-      {pagosAutorizados.length === 0 && (
-        <Text style={styles.empty}>Sin pagos autorizados en este periodo.</Text>
+      {/* Toggle: por pagar / ya pagadas */}
+      <View style={styles.cxpToggle}>
+        <TouchableOpacity
+          style={[styles.cxpToggleBtn, vista === 'porPagar' && styles.cxpToggleBtnActive]}
+          onPress={() => setVista('porPagar')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.cxpToggleText, vista === 'porPagar' && styles.cxpToggleTextActive]}>
+            Por pagar ({pagosAutorizados.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.cxpToggleBtn, vista === 'pagadas' && styles.cxpToggleBtnActive]}
+          onPress={() => setVista('pagadas')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.cxpToggleText, vista === 'pagadas' && styles.cxpToggleTextActive]}>
+            Pagadas ({pagadas.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.reporteNota}>
+        {vista === 'porPagar'
+          ? 'Pagos autorizados · por fecha de cierre · costo real'
+          : 'Solicitudes pagadas · por fecha de cierre · costo real'}
+      </Text>
+
+      {lista.length === 0 && (
+        <Text style={styles.empty}>
+          {vista === 'porPagar' ? 'Sin pagos autorizados en este periodo.' : 'Sin solicitudes pagadas en este periodo.'}
+        </Text>
       )}
 
-      {pagosAutorizados.map((s) => (
-        <View key={s.idserviciomovil} style={styles.cxpRow}>
-          <View style={styles.cxpInfo}>
-            <Text style={styles.cxpId}>
-              #{String(s.idserviciomovil)}{s.PO != null ? `  ·  PO ${s.PO}` : ''}
-            </Text>
-            <Text style={styles.cxpMeta}>
-              {s.tunidad} · {s.numeconomico} · cierre {formatFechaCorta(s.fechacierre)}
-            </Text>
-          </View>
-          <Text style={styles.cxpMonto}>{money(s.costoreal ?? s.costo)}</Text>
+      {vista === 'porPagar' && pagosAutorizados.length > 0 && (
+        <View style={styles.cxpAcciones}>
+          <TouchableOpacity style={styles.cxpSelall} onPress={toggleAll} activeOpacity={0.7}>
+            <View style={[styles.checkbox, allSelected && styles.checkboxOn]}>
+              {allSelected && <Text style={styles.checkboxMark}>✓</Text>}
+            </View>
+            <Text style={styles.cxpSelallText}>Seleccionar todo</Text>
+          </TouchableOpacity>
+          {seleccion.size > 0 && (
+            <TouchableOpacity style={styles.btnPagar} onPress={() => { setPagoError(''); setModalOpen(true); }} activeOpacity={0.7}>
+              <Text style={styles.btnPagarText}>Pagar {seleccion.size} · {money(totalSeleccion)}</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      ))}
+      )}
 
-      {pagosAutorizados.length > 0 && (
+      {lista.map((s) => {
+        const checked = seleccion.has(s.idserviciomovil);
+        const Row = vista === 'porPagar' ? TouchableOpacity : View;
+        const rowProps = vista === 'porPagar'
+          ? { onPress: () => toggle(s.idserviciomovil), activeOpacity: 0.7 }
+          : {};
+        return (
+          <Row key={s.idserviciomovil} style={styles.cxpRow} {...rowProps}>
+            {vista === 'porPagar' && (
+              <View style={[styles.checkbox, checked && styles.checkboxOn]}>
+                {checked && <Text style={styles.checkboxMark}>✓</Text>}
+              </View>
+            )}
+            <View style={styles.cxpInfo}>
+              <Text style={styles.cxpId}>
+                #{String(s.idserviciomovil)}{s.PO != null ? `  ·  PO ${s.PO}` : ''}
+              </Text>
+              <Text style={styles.cxpMeta}>
+                {s.tunidad} · {s.numeconomico} · cierre {formatFechaCorta(s.fechacierre)}
+              </Text>
+              {vista === 'pagadas' && s.comentariocheckbox ? (
+                <Text style={styles.cxpComentario}>“{s.comentariocheckbox}”</Text>
+              ) : null}
+            </View>
+            <Text style={styles.cxpMonto}>{money(s.costoreal ?? s.costo)}</Text>
+          </Row>
+        );
+      })}
+
+      {lista.length > 0 && (
         <View style={styles.cxpTotalRow}>
-          <Text style={styles.cxpTotalLabel}>Total ({pagosAutorizados.length} {pagosAutorizados.length === 1 ? 'ticket' : 'tickets'})</Text>
+          <Text style={styles.cxpTotalLabel}>Total ({lista.length} {lista.length === 1 ? 'ticket' : 'tickets'})</Text>
           <Text style={styles.cxpTotalMonto}>{money(totalMonto)}</Text>
         </View>
       )}
+
+      <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => !pagando && setModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitulo}>
+              Pagar {seleccionadas.length} {seleccionadas.length === 1 ? 'ticket' : 'tickets'} · {money(totalSeleccion)}
+            </Text>
+            <Text style={styles.modalTexto}>
+              Se marcarán como Pagado y saldrán de cuentas por pagar. Comentario (opcional):
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={comentario}
+              onChangeText={setComentario}
+              placeholder="Comentario opcional…"
+              placeholderTextColor={INK_LIGHT}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            {!!pagoError && <Text style={styles.modalError}>{pagoError}</Text>}
+            <View style={styles.modalAcciones}>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => { setModalOpen(false); setComentario(''); }} disabled={pagando} activeOpacity={0.7}>
+                <Text style={styles.modalBtnCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnPagar, pagando && { opacity: 0.4 }]} onPress={confirmarPago} disabled={pagando} activeOpacity={0.7}>
+                {pagando ? <ActivityIndicator color={PAPER} size="small" /> : <Text style={styles.modalBtnPagarText}>Confirmar pago</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -226,7 +373,14 @@ export default function ReportesAdmin() {
       {!loading && !error && (
         <>
           <ReporteKpis solicitudes={solicitudes} rango={rango} />
-          <ReporteCuentasPorPagar solicitudes={solicitudes} rango={rango} />
+          <ReporteCuentasPorPagar
+            solicitudes={solicitudes}
+            rango={rango}
+            onPagados={(ids) => setSolicitudes((prev) =>
+              prev.map((s) => ids.includes(s.idserviciomovil)
+                ? { ...s, estatus: 'Pagado' }
+                : s))}
+          />
         </>
       )}
     </View>
@@ -319,6 +473,14 @@ const styles = StyleSheet.create({
     color: INK_MID, marginTop: 2,
   },
   cxpMonto: { fontFamily: mono, fontSize: 14, color: INK },
+  cxpComentario: { fontFamily: serif, fontSize: 12, fontStyle: 'italic', color: INK_MID, marginTop: 3 },
+
+  // Toggle por pagar / pagadas
+  cxpToggle: { flexDirection: 'row', gap: 6, backgroundColor: PAPER_TINT, borderRadius: 12, padding: 3, marginTop: 4, marginBottom: 12 },
+  cxpToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 9 },
+  cxpToggleBtnActive: { backgroundColor: INK },
+  cxpToggleText: { fontFamily: sans, fontSize: 10, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', color: INK_MID },
+  cxpToggleTextActive: { color: PAPER },
   cxpTotalRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderTopWidth: 1, borderTopColor: INK, paddingVertical: 12,
@@ -335,4 +497,40 @@ const styles = StyleSheet.create({
   },
   errorText: { fontFamily: sans, fontSize: 13, color: INK },
   empty: { fontFamily: sans, fontSize: 12, color: INK_MID, fontStyle: 'italic', marginTop: 4 },
+
+  // Selección + pago en cuentas por pagar
+  cxpAcciones: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexWrap: 'wrap', gap: 10, marginTop: 2, marginBottom: 4,
+  },
+  cxpSelall: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cxpSelallText: {
+    fontFamily: sans, fontSize: 9, letterSpacing: 1, textTransform: 'uppercase',
+    color: INK_MID, fontWeight: '700',
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: RULE,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: PAPER,
+  },
+  checkboxOn: { backgroundColor: BRAND, borderColor: BRAND },
+  checkboxMark: { color: PAPER, fontSize: 13, fontWeight: '700', lineHeight: 16 },
+  btnPagar: { backgroundColor: BRAND, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 16, ...CARD_SHADOW },
+  btnPagarText: { fontFamily: sans, color: PAPER, fontWeight: '700', fontSize: 11, letterSpacing: 0.5 },
+
+  // Modal de pago
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 28 },
+  modalCard: { backgroundColor: PAPER, borderRadius: 20, padding: 22, ...CARD_SHADOW },
+  modalTitulo: { fontFamily: serif, fontSize: 16, fontWeight: '700', color: INK, marginBottom: 8 },
+  modalTexto: { fontFamily: sans, fontSize: 12, color: INK_MID, lineHeight: 18, marginBottom: 12 },
+  modalInput: {
+    fontFamily: sans, fontSize: 14, color: INK, backgroundColor: PAPER_TINT,
+    borderRadius: 12, padding: 12, minHeight: 76, marginBottom: 12,
+  },
+  modalError: { fontFamily: sans, fontSize: 12, color: RED, marginBottom: 8 },
+  modalAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  modalBtn: { borderRadius: 999, paddingVertical: 11, paddingHorizontal: 20, alignItems: 'center', minWidth: 96 },
+  modalBtnCancel: { backgroundColor: PAPER_TINT },
+  modalBtnCancelText: { fontFamily: sans, color: INK, fontWeight: '700', fontSize: 12, letterSpacing: 0.5 },
+  modalBtnPagar: { backgroundColor: BRAND },
+  modalBtnPagarText: { fontFamily: sans, color: PAPER, fontWeight: '700', fontSize: 12, letterSpacing: 0.5 },
 });

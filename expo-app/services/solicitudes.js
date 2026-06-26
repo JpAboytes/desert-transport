@@ -30,6 +30,12 @@ export const getSolicitudes = async () => {
   return api.get('/admin/solicitudes');
 };
 
+// Marca como pagado un ticket con pago autorizado (estatus -> 'Pagado'); comentario opcional.
+export const pagarSolicitud = async (id, comentarioCheckbox) => {
+  const api = await authAxios();
+  return api.patch(`/admin/solicitudes/${id}`, { pagar: true, comentarioCheckbox });
+};
+
 export const actualizarEstatus = async (id, estatus) => {
   const api = await authAxios();
   return api.patch(`/admin/solicitudes/${id}`, { estatus });
@@ -46,9 +52,10 @@ export const cerrarReparacion = async (id, { costoReal, fotos }) => {
 };
 
 // Decisión de pago del admin sobre un ticket Reparado (true = autorizar, false = rechazar).
-export const autorizarPago = async (id, autorizacionPago) => {
+// Al rechazar, comentarioRechazo es obligatorio (lo verá el mecánico).
+export const autorizarPago = async (id, autorizacionPago, comentarioRechazo) => {
   const api = await authAxios();
-  return api.patch(`/admin/solicitudes/${id}`, { autorizacionPago });
+  return api.patch(`/admin/solicitudes/${id}`, { autorizacionPago, comentarioRechazo });
 };
 
 export const registerPushToken = async (expoPushToken) => {

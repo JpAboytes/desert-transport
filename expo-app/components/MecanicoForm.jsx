@@ -8,6 +8,7 @@ import { getUnidades, crearSolicitud, getMisSolicitudes, cerrarReparacion } from
 import { subirFotos } from '../services/uploads';
 import FotoPicker from './FotoPicker';
 import FotoThumb from './FotoThumb';
+import DetalleSolicitud from './DetalleSolicitud';
 
 const INK        = '#0a0a0a';
 const BRAND      = '#046738';
@@ -28,22 +29,38 @@ const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 
 const TIPOS_UNIDAD = ['Camión', 'Remolque'];
 const TIPO_API     = { 'Camión': 'camion', 'Remolque': 'remolque' };
-const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
+const FILTROS      = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 const POR_PAGINA   = 10;
 
 const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
+// Hora de pared: interpreta el DATETIME guardado tal cual, SIN convertir zona horaria.
+// Acepta "2026-06-22 11:36:00" o el ISO con 'Z' que serializa el backend, y devuelve un Date
+// local con esos mismos números (lo que está en BD es lo que se muestra).
+function parseWall(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+}
+
+// Hora de pared local (sin zona) para mandar al backend: "YYYY-MM-DDTHH:MM:SS".
+function toWallString(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 function formatFecha(raw) {
-  if (!raw) return '—';
-  return new Date(raw).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const d = parseWall(raw);
+  return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 }
 
 // Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
 function dentroDeRango(raw, rango) {
   if (rango === 'Todo') return true;
-  if (!raw) return false;
-  const f = new Date(raw);
+  const f = parseWall(raw);
+  if (!f) return false;
   if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
   const dias = rango === '7 días' ? 7 : 30;
   const limite = new Date();
@@ -91,6 +108,7 @@ const estatusStyleOf = (estatus) => ({
   'En proceso':     styles.estatusProceso,
   Reparado:         styles.estatusReparado,
   'Pago autorizado': styles.estatusPagoAutorizado,
+  Pagado:           styles.estatusPagado,
   Rechazado:        styles.estatusRechazado,
   'Pago rechazado': styles.estatusRechazado,
 }[estatus] ?? {});
@@ -148,6 +166,7 @@ function MisSolicitudes({ refreshKey }) {
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
   const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
+  const [detalleId, setDetalleId] = useState(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -175,6 +194,7 @@ function MisSolicitudes({ refreshKey }) {
     dentroDeRango(s.fechahora, filtroFecha)
   );
   const pagina = visibles.slice(0, visibleCount);
+  const detalle = lista.find((s) => s.idserviciomovil === detalleId);
 
   return (
     <>
@@ -199,7 +219,12 @@ function MisSolicitudes({ refreshKey }) {
       )}
 
       {pagina.map((s) => (
-        <View key={s.idserviciomovil} style={styles.solicitudItem}>
+        <TouchableOpacity
+          key={s.idserviciomovil}
+          style={styles.solicitudItem}
+          activeOpacity={0.9}
+          onPress={() => setDetalleId(s.idserviciomovil)}
+        >
           <View style={styles.solicitudHeader}>
             <Text style={styles.solicitudId}>#{String(s.idserviciomovil)}</Text>
             <View style={[styles.estatusBadge, estatusStyleOf(displayEstatus(s))]}>
@@ -240,8 +265,20 @@ function MisSolicitudes({ refreshKey }) {
               <Text style={styles.campoValor}>{s.nombreaprobador}</Text>
             </View>
           )}
+          {displayEstatus(s) === 'Pago rechazado' && s.nombrepagador ? (
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>Rechazado por  </Text>
+              <Text style={styles.campoValor}>{s.nombrepagador}</Text>
+            </View>
+          ) : null}
+          {displayEstatus(s) === 'Pago rechazado' && s.comentariorechazo ? (
+            <View style={styles.campo}>
+              <Text style={styles.campoLabel}>Motivo del rechazo de pago  </Text>
+              <Text style={styles.campoValor}>{s.comentariorechazo}</Text>
+            </View>
+          ) : null}
           <FotosColapsables fotos={s.fotos} />
-        </View>
+        </TouchableOpacity>
       ))}
 
       {visibles.length > visibleCount && (
@@ -253,6 +290,8 @@ function MisSolicitudes({ refreshKey }) {
           <Text style={styles.btnVerMasText}>Ver más solicitudes ({visibles.length - visibleCount})</Text>
         </TouchableOpacity>
       )}
+
+      {detalle && <DetalleSolicitud solicitud={detalle} onClose={() => setDetalleId(null)} />}
     </>
   );
 }
@@ -451,7 +490,7 @@ export default function MecanicoForm({ user, showToast }) {
     try {
       const urls = await subirFotos(fotos);
       await crearSolicitud({
-        fechaHora: fechaHora.toISOString(),
+        fechaHora: toWallString(fechaHora),
         tipoUnidad, numeroEconomico, descripcionServicio, costoEstimado,
         ...(esCamion ? { odometro } : {}),
         fotos: urls,
@@ -695,6 +734,7 @@ const styles = StyleSheet.create({
   estatusProceso:    { borderColor: WARNING, color: INK, backgroundColor: WARNING },
   estatusReparado:   { borderColor: LIME, color: INK, backgroundColor: LIME },
   estatusPagoAutorizado: { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
+  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
   estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 
   campo:      { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 3 },

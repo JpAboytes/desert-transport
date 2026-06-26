@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, ActivityIndicator, Platform, Modal,
+  FlatList, ActivityIndicator, Platform, Modal, TextInput,
 } from 'react-native';
 import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/solicitudes';
 import FotoThumb from './FotoThumb';
+import DetalleSolicitud from './DetalleSolicitud';
 
 const INK        = '#0a0a0a';
 const BRAND      = '#046738';
@@ -22,7 +23,7 @@ const sans = Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif';
 const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace';
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Rechazado', 'Pago rechazado'];
+const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Reparado', 'Pago autorizado', 'Pagado', 'Rechazado', 'Pago rechazado'];
 const FILTROS_FECHA = ['Todo', 'Hoy', '7 días', '30 días'];
 const POR_PAGINA = 10;
 
@@ -31,8 +32,8 @@ const money = (v) => `$${Number(v).toLocaleString('es-MX', { minimumFractionDigi
 // Filtro por rango de fecha (presets). 'Hoy' = mismo día; N días = últimos N días.
 function dentroDeRango(raw, rango) {
   if (rango === 'Todo') return true;
-  if (!raw) return false;
-  const f = new Date(raw);
+  const f = parseWall(raw);
+  if (!f) return false;
   if (rango === 'Hoy') return f.toDateString() === new Date().toDateString();
   const dias = rango === '7 días' ? 7 : 30;
   const limite = new Date();
@@ -50,10 +51,18 @@ const displayEstatus = (s) => {
   return s.estatus;
 };
 
+// Hora de pared: interpreta el DATETIME guardado tal cual, SIN convertir zona horaria.
+// Acepta "2026-06-22 11:36:00" o el ISO con 'Z' que serializa el backend.
+function parseWall(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+}
+
 function formatFecha(raw) {
-  if (!raw) return '—';
-  const d = new Date(raw);
-  return d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const d = parseWall(raw);
+  return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 }
 
 // ── Select modal B&W (compacto, para filtros) ────────────────
@@ -122,8 +131,10 @@ function FotosColapsables({ fotos }) {
   );
 }
 
-function SolicitudItem({ item, onActualizar, onPago, onToast }) {
+function SolicitudItem({ item, onActualizar, onPago, onToast, onVerDetalle }) {
   const [loading, setLoading] = useState(null);
+  const [rechazoOpen, setRechazoOpen] = useState(false);
+  const [comentario, setComentario] = useState('');
   const est = displayEstatus(item);
 
   const handleEstatus = async (estatus, etiqueta) => {
@@ -137,11 +148,11 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
     setLoading(null);
   };
 
-  const handlePago = async (aprobado) => {
+  const handlePago = async (aprobado, comentarioRechazo) => {
     const key = aprobado ? 'pago-si' : 'pago-no';
     setLoading(key);
     try {
-      await onPago(item.idserviciomovil, aprobado);
+      await onPago(item.idserviciomovil, aprobado, comentarioRechazo);
       onToast?.(`Pago de #${String(item.idserviciomovil)} ${aprobado ? 'autorizado' : 'rechazado'}`);
     } catch {
       onToast?.('Error al registrar el pago', 'error');
@@ -149,17 +160,26 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
     setLoading(null);
   };
 
+  const confirmarRechazo = async () => {
+    const txt = comentario.trim();
+    if (!txt) return;
+    await handlePago(false, txt);
+    setRechazoOpen(false);
+    setComentario('');
+  };
+
   const estatusStyle = {
     Pendiente:         styles.estatusPendiente,
     'En proceso':      styles.estatusProceso,
     Reparado:          styles.estatusReparado,
     'Pago autorizado': styles.estatusPagoAutorizado,
+    Pagado:            styles.estatusPagado,
     Rechazado:         styles.estatusRechazado,
     'Pago rechazado':  styles.estatusRechazado,
   }[est] ?? {};
 
   return (
-    <View style={styles.item}>
+    <TouchableOpacity style={styles.item} activeOpacity={0.9} onPress={() => onVerDetalle?.(item)}>
       <View style={styles.itemHeader}>
         <Text style={styles.itemId}>#{String(item.idserviciomovil)}</Text>
         <View style={[styles.estatusBadge, estatusStyle]}>
@@ -209,6 +229,19 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
         </View>
       )}
 
+      {est === 'Pago rechazado' && item.nombrepagador && (
+        <View style={styles.campo}>
+          <Text style={styles.campoLabel}>Rechazado por  </Text>
+          <Text style={styles.campoValor}>{item.nombrepagador}</Text>
+        </View>
+      )}
+      {est === 'Pago rechazado' && item.comentariorechazo && (
+        <View style={styles.campo}>
+          <Text style={styles.campoLabel}>Motivo del rechazo de pago  </Text>
+          <Text style={styles.campoValor}>{item.comentariorechazo}</Text>
+        </View>
+      )}
+
       {item.estatus === 'Pendiente' && (
         <View style={styles.acciones}>
           <TouchableOpacity
@@ -253,7 +286,7 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
 
           <TouchableOpacity
             style={[styles.btnAccion, styles.btnRechazar, loading && { opacity: 0.4 }]}
-            onPress={() => handlePago(false)}
+            onPress={() => setRechazoOpen(true)}
             disabled={!!loading}
             activeOpacity={0.7}
           >
@@ -264,7 +297,51 @@ function SolicitudItem({ item, onActualizar, onPago, onToast }) {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+
+      {/* La corrección de un pago rechazado (Autorizar pago) vive ahora dentro del modal de detalle. */}
+
+      {/* Modal de confirmación de rechazo de pago con comentario obligatorio. */}
+      <Modal visible={rechazoOpen} transparent animationType="fade" onRequestClose={() => setRechazoOpen(false)}>
+        <View style={styles.rechazoOverlay}>
+          <View style={styles.rechazoCard}>
+            <Text style={styles.rechazoTitulo}>Rechazar pago · #{String(item.idserviciomovil)}</Text>
+            <Text style={styles.rechazoTexto}>
+              ¿Seguro que quieres rechazar el pago? Deja un comentario para el mecánico (obligatorio).
+            </Text>
+            <TextInput
+              style={styles.rechazoInput}
+              value={comentario}
+              onChangeText={setComentario}
+              placeholder="Motivo del rechazo…"
+              placeholderTextColor={INK_LIGHT}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <View style={styles.rechazoAcciones}>
+              <TouchableOpacity
+                style={[styles.btnAccion, styles.btnCancelar]}
+                onPress={() => { setRechazoOpen(false); setComentario(''); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.btnRechazarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnAccion, styles.btnRechazar, (!comentario.trim() || loading === 'pago-no') && { opacity: 0.4 }]}
+                onPress={confirmarRechazo}
+                disabled={!comentario.trim() || loading === 'pago-no'}
+                activeOpacity={0.7}
+              >
+                {loading === 'pago-no'
+                  ? <ActivityIndicator color={INK} size="small" />
+                  : <Text style={styles.btnRechazarText}>Confirmar rechazo</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </TouchableOpacity>
   );
 }
 
@@ -275,6 +352,7 @@ export default function AdminView({ showToast }) {
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
   const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
+  const [detalleId, setDetalleId] = useState(null);
 
   // Al cambiar los filtros se vuelve a la primera página.
   useEffect(() => { setVisibleCount(POR_PAGINA); }, [filtro, filtroFecha]);
@@ -301,10 +379,12 @@ export default function AdminView({ showToast }) {
     );
   };
 
-  const handlePago = async (id, aprobado) => {
-    await autorizarPago(id, aprobado);
+  const handlePago = async (id, aprobado, comentarioRechazo) => {
+    await autorizarPago(id, aprobado, comentarioRechazo);
     setSolicitudes((prev) =>
-      prev.map((s) => s.idserviciomovil === id ? { ...s, autorizacionpago: aprobado ? 1 : 0 } : s)
+      prev.map((s) => s.idserviciomovil === id
+        ? { ...s, autorizacionpago: aprobado ? 1 : 0, comentariorechazo: aprobado ? null : comentarioRechazo }
+        : s)
     );
   };
 
@@ -313,6 +393,7 @@ export default function AdminView({ showToast }) {
     dentroDeRango(s.fechahora, filtroFecha)
   );
   const visibles = lista.slice(0, visibleCount);
+  const detalle = solicitudes.find((s) => s.idserviciomovil === detalleId);
 
   return (
     <View style={styles.container}>
@@ -349,7 +430,13 @@ export default function AdminView({ showToast }) {
         data={visibles}
         keyExtractor={(item) => String(item.idserviciomovil)}
         renderItem={({ item }) => (
-          <SolicitudItem item={item} onActualizar={handleActualizar} onPago={handlePago} onToast={showToast} />
+          <SolicitudItem
+            item={item}
+            onActualizar={handleActualizar}
+            onPago={handlePago}
+            onToast={showToast}
+            onVerDetalle={(it) => setDetalleId(it.idserviciomovil)}
+          />
         )}
         scrollEnabled={false}
       />
@@ -362,6 +449,21 @@ export default function AdminView({ showToast }) {
         >
           <Text style={styles.btnVerMasText}>Ver más solicitudes ({lista.length - visibleCount})</Text>
         </TouchableOpacity>
+      )}
+
+      {detalle && (
+        <DetalleSolicitud
+          solicitud={detalle}
+          onClose={() => setDetalleId(null)}
+          onAutorizarPago={async (id) => {
+            try {
+              await handlePago(id, true);
+              showToast?.(`Pago de #${String(id)} autorizado`);
+            } catch {
+              showToast?.('Error al registrar el pago', 'error');
+            }
+          }}
+        />
       )}
     </View>
   );
@@ -437,6 +539,7 @@ const styles = StyleSheet.create({
   estatusProceso:    { borderColor: WARNING, color: INK, backgroundColor: WARNING },
   estatusReparado:   { borderColor: LIME, color: INK, backgroundColor: LIME },
   estatusPagoAutorizado: { borderColor: BRAND, color: PAPER, backgroundColor: BRAND },
+  estatusPagado:     { borderColor: INK, color: PAPER, backgroundColor: INK },
   estatusRechazado:  { borderColor: RED, color: PAPER, backgroundColor: RED },
 
   itemMeta: {
@@ -461,6 +564,18 @@ const styles = StyleSheet.create({
   btnAccion: { paddingVertical: 10, paddingHorizontal: 20, alignItems: 'center', minWidth: 96, borderRadius: 999 },
   btnAprobar: { backgroundColor: BRAND, ...CARD_SHADOW },
   btnRechazar: { backgroundColor: PAPER_TINT },
+  btnCancelar: { backgroundColor: PAPER_TINT },
+
+  // Modal de rechazo de pago
+  rechazoOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 28 },
+  rechazoCard: { backgroundColor: PAPER, borderRadius: 20, padding: 22, ...CARD_SHADOW },
+  rechazoTitulo: { fontFamily: serif, fontSize: 17, fontWeight: '700', color: INK, marginBottom: 8 },
+  rechazoTexto: { fontFamily: sans, fontSize: 13, color: INK_MID, lineHeight: 19, marginBottom: 14 },
+  rechazoInput: {
+    fontFamily: sans, fontSize: 14, color: INK, backgroundColor: PAPER_TINT,
+    borderRadius: 12, padding: 12, minHeight: 96, marginBottom: 16,
+  },
+  rechazoAcciones: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
   btnAprobarText: {
     fontFamily: sans, color: PAPER, fontWeight: '700',
     fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
