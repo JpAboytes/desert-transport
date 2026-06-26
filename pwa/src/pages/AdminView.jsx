@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSolicitudes, actualizarEstatus, autorizarPago } from '../services/api';
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
+import DetalleSolicitud from '../components/DetalleSolicitud';
 import BotonNotificaciones from '../components/BotonNotificaciones';
 import ReportesAdmin from '../components/ReportesAdmin';
 import { useToast } from '../hooks/useToast';
@@ -89,98 +90,7 @@ function formatFecha(raw) {
   return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 }
 
-// Etiqueta de la decisión de pago (solo aplica a tickets cerrados).
-const pagoLabel = (s) => {
-  if (s.autorizacionpago === 1) return 'Autorizado';
-  if (s.autorizacionpago === 0) return 'Rechazado';
-  return 'Pendiente';
-};
-
-function Dato({ label, children }) {
-  return (
-    <div className="detalle-dato">
-      <span className="solicitud__field-label">{label}</span>
-      <span className="detalle-dato__valor">{children}</span>
-    </div>
-  );
-}
-
-// Modal con el detalle completo de una solicitud (se abre al hacer clic en la tarjeta).
-function DetalleSolicitud({ s, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  const est = displayEstatus(s);
-
-  return (
-    <div className="detalle-modal" onClick={onClose}>
-      <div className="detalle-modal__card" onClick={(e) => e.stopPropagation()}>
-        <div className="detalle-modal__header">
-          <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
-          <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(est)}`}>
-            {ESTATUS_LABEL[est] ?? est}
-          </span>
-          {s.PO != null && <span className="po-box">PO {s.PO}</span>}
-          <button type="button" className="detalle-modal__cerrar" onClick={onClose} aria-label="Cerrar">✕</button>
-        </div>
-
-        <div className="detalle-modal__grid">
-          <Dato label="Solicitante">{s.nombresolicitante}</Dato>
-          {s.nombreaprobador && (
-            <Dato label={s.estatus === 'Rechazado' ? 'Rechazado por' : 'Autorizado por'}>
-              {s.nombreaprobador}
-            </Dato>
-          )}
-          <Dato label="Tipo de unidad">{s.tunidad}</Dato>
-          <Dato label="No. económico">{s.numeconomico}</Dato>
-          <Dato label="Fecha de solicitud">{formatFecha(s.fechahora)}</Dato>
-          {s.fechacierre && <Dato label="Fecha de cierre">{formatFecha(s.fechacierre)}</Dato>}
-          {s.odometro != null && (
-            <Dato label="Odómetro">{Number(s.odometro).toLocaleString('es-MX')} mi</Dato>
-          )}
-          <Dato label="Costo estimado">{money(s.costo)}</Dato>
-          {s.costoreal != null && <Dato label="Costo real">{money(s.costoreal)}</Dato>}
-          {s.estatus === 'Reparado' && <Dato label="Pago">{pagoLabel(s)}</Dato>}
-          {displayEstatus(s) === 'Pago rechazado' && s.nombrepagador && (
-            <Dato label="Rechazado por">{s.nombrepagador}</Dato>
-          )}
-        </div>
-
-        <div className="detalle-dato detalle-dato--full">
-          <span className="solicitud__field-label">Descripción</span>
-          <span className="detalle-dato__valor">{s.descripcion}</span>
-        </div>
-
-        {displayEstatus(s) === 'Pago rechazado' && s.comentariorechazo && (
-          <div className="detalle-dato detalle-dato--full">
-            <span className="solicitud__field-label">Motivo del rechazo de pago</span>
-            <span className="detalle-dato__valor">{s.comentariorechazo}</span>
-          </div>
-        )}
-
-        {s.fotos?.length > 0 && (
-          <div className="solicitud__fotos">
-            {['Apertura', 'Cierre'].map((tipo) => {
-              const fs = s.fotos.filter((f) => f.tipo === tipo);
-              if (fs.length === 0) return null;
-              return (
-                <div key={tipo} className="solicitud__foto-col">
-                  <span className="solicitud__field-label">{tipo}</span>
-                  <div className="solicitud__fotos-row">
-                    {fs.map((f, i) => <FotoThumb key={i} url={f.url} size={72} />)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// El detalle (modal) vive en components/DetalleSolicitud, compartido por admin y mecánico.
 
 function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
   const [loading, setLoading] = useState(null);
@@ -306,18 +216,7 @@ function SolicitudRow({ s, onActualizar, onPago, onToast, onVerDetalle }) {
         </div>
       )}
 
-      {/* Pago rechazado: permite corregir la decisión y autorizar el pago. */}
-      {est === 'Pago rechazado' && (
-        <div className="solicitud__actions" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="btn-accion btn-accion--aprobar"
-            onClick={() => handlePago(true)}
-            disabled={!!loading}
-          >
-            {loading === 'pago-si' ? '...' : 'Autorizar pago'}
-          </button>
-        </div>
-      )}
+      {/* La corrección de un pago rechazado (Autorizar pago) vive ahora dentro del modal de detalle. */}
 
       {/* Modal de confirmación de rechazo de pago con comentario obligatorio. */}
       {rechazoOpen && (
@@ -496,7 +395,20 @@ export default function AdminView() {
         </>
       )}
 
-      {detalle && <DetalleSolicitud s={detalle} onClose={() => setDetalleId(null)} />}
+      {detalle && (
+        <DetalleSolicitud
+          s={detalle}
+          onClose={() => setDetalleId(null)}
+          onAutorizarPago={async (id) => {
+            try {
+              await handlePago(id, true);
+              showToast(`Pago de #${String(id)} autorizado`);
+            } catch (e) {
+              showToast(e?.response?.data?.message || 'Error al registrar el pago', 'error');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

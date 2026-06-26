@@ -3,6 +3,7 @@ import { getUnidades, crearSolicitud, getMisSolicitudes, cerrarReparacion } from
 import { subirFotos } from '../services/uploads';
 import Toast from '../components/Toast';
 import FotoThumb from '../components/FotoThumb';
+import DetalleSolicitud from '../components/DetalleSolicitud';
 import FotoPicker from '../components/FotoPicker';
 import BotonNotificaciones from '../components/BotonNotificaciones';
 import { useToast } from '../hooks/useToast';
@@ -33,7 +34,8 @@ function FotosColapsables({ fotos }) {
   const [abierto, setAbierto] = useState(false);
   if (!fotos?.length) return null;
   return (
-    <div className="fotos-colapsables">
+    // stopPropagation: la tarjeta abre el modal de detalle al hacer clic.
+    <div className="fotos-colapsables" onClick={(e) => e.stopPropagation()}>
       <button type="button" className="fotos-toggle" onClick={() => setAbierto((a) => !a)}>
         {abierto ? 'Ocultar imágenes' : `Ver imágenes (${fotos.length})`}
       </button>
@@ -76,6 +78,7 @@ function MisSolicitudes({ refreshKey }) {
   const [filtro, setFiltro] = useState('Todos');
   const [filtroFecha, setFiltroFecha] = useState('Todo');
   const [visibleCount, setVisibleCount] = useState(POR_PAGINA);
+  const [detalleId, setDetalleId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -97,6 +100,7 @@ function MisSolicitudes({ refreshKey }) {
     dentroDeRango(s.fechahora, filtroFecha)
   );
   const pagina = visibles.slice(0, visibleCount);
+  const detalle = lista.find((s) => s.idserviciomovil === detalleId);
 
   return (
     <>
@@ -126,7 +130,7 @@ function MisSolicitudes({ refreshKey }) {
 
       <div className="solicitudes-lista">
         {pagina.map((s) => (
-        <div key={s.idserviciomovil} className="solicitud">
+        <div key={s.idserviciomovil} className="solicitud solicitud--clickable" onClick={() => setDetalleId(s.idserviciomovil)}>
           <div className="solicitud__header">
             <span className="solicitud__id">#{String(s.idserviciomovil)}</span>
             <span className={`solicitud__estatus solicitud__estatus--${estatusSlug(displayEstatus(s))}`}>
@@ -187,6 +191,8 @@ function MisSolicitudes({ refreshKey }) {
           Ver más solicitudes ({visibles.length - visibleCount})
         </button>
       )}
+
+      {detalle && <DetalleSolicitud s={detalle} onClose={() => setDetalleId(null)} />}
     </>
   );
 }
