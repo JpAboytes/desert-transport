@@ -105,11 +105,18 @@ function ReporteKpis({ solicitudes, rango }) {
 // determina por la fecha de cierre de la reparación (no hay timestamp de
 // la decisión de pago en la BD).
 function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
+  const [vista, setVista] = useState('porPagar'); // 'porPagar' | 'pagadas'
+
   const pagosAutorizados = solicitudes
     .filter((s) => displayEstatus(s) === 'Pago autorizado' && enPeriodo(s.fechacierre, rango))
     .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
 
-  const totalMonto = pagosAutorizados.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
+  const pagadas = solicitudes
+    .filter((s) => s.estatus === 'Pagado' && enPeriodo(s.fechacierre, rango))
+    .sort((a, b) => (parseWall(a.fechacierre) || 0) - (parseWall(b.fechacierre) || 0));
+
+  const lista = vista === 'porPagar' ? pagosAutorizados : pagadas;
+  const totalMonto = lista.reduce((acc, s) => acc + Number(s.costoreal ?? s.costo ?? 0), 0);
 
   const [seleccion, setSeleccion] = useState(() => new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -151,13 +158,40 @@ function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
   return (
     <section className="reporte">
       <h3 className="reporte__titulo">Cuentas por pagar</h3>
-      <p className="reporte__nota">Pagos autorizados · por fecha de cierre · costo real</p>
 
-      {pagosAutorizados.length === 0 && (
-        <p className="admin-estado">Sin pagos autorizados en este periodo.</p>
+      {/* Toggle: por pagar / ya pagadas (sobre el periodo seleccionado) */}
+      <div className="periodo-tipos" style={{ marginTop: 4, marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`periodo-tipos__btn ${vista === 'porPagar' ? 'periodo-tipos__btn--active' : ''}`}
+          onClick={() => setVista('porPagar')}
+        >
+          Por pagar ({pagosAutorizados.length})
+        </button>
+        <button
+          type="button"
+          className={`periodo-tipos__btn ${vista === 'pagadas' ? 'periodo-tipos__btn--active' : ''}`}
+          onClick={() => setVista('pagadas')}
+        >
+          Pagadas ({pagadas.length})
+        </button>
+      </div>
+
+      <p className="reporte__nota">
+        {vista === 'porPagar'
+          ? 'Pagos autorizados · por fecha de cierre · costo real'
+          : 'Solicitudes pagadas · por fecha de cierre · costo real'}
+      </p>
+
+      {lista.length === 0 && (
+        <p className="admin-estado">
+          {vista === 'porPagar'
+            ? 'Sin pagos autorizados en este periodo.'
+            : 'Sin solicitudes pagadas en este periodo.'}
+        </p>
       )}
 
-      {pagosAutorizados.length > 0 && (
+      {vista === 'porPagar' && pagosAutorizados.length > 0 && (
         <div className="cxp-acciones">
           <label className="cxp-selall">
             <input type="checkbox" checked={allSelected} onChange={toggleAll} />
@@ -175,14 +209,16 @@ function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
         </div>
       )}
 
-      {pagosAutorizados.map((s) => (
+      {lista.map((s) => (
         <div key={s.idserviciomovil} className="cxp-row">
-          <input
-            type="checkbox"
-            className="cxp-row__check"
-            checked={seleccion.has(s.idserviciomovil)}
-            onChange={() => toggle(s.idserviciomovil)}
-          />
+          {vista === 'porPagar' && (
+            <input
+              type="checkbox"
+              className="cxp-row__check"
+              checked={seleccion.has(s.idserviciomovil)}
+              onChange={() => toggle(s.idserviciomovil)}
+            />
+          )}
           <div className="cxp-row__info">
             <span className="cxp-row__id">
               #{String(s.idserviciomovil)}{s.PO != null ? `  ·  PO ${s.PO}` : ''}
@@ -190,15 +226,18 @@ function ReporteCuentasPorPagar({ solicitudes, rango, onPagados }) {
             <span className="cxp-row__meta">
               {s.tunidad} · {s.numeconomico} · cierre {formatFechaCorta(s.fechacierre)}
             </span>
+            {vista === 'pagadas' && s.comentariocheckbox && (
+              <span className="cxp-row__comentario">“{s.comentariocheckbox}”</span>
+            )}
           </div>
           <span className="cxp-row__monto">{money(s.costoreal ?? s.costo)}</span>
         </div>
       ))}
 
-      {pagosAutorizados.length > 0 && (
+      {lista.length > 0 && (
         <div className="cxp-total">
           <span className="cxp-total__label">
-            Total ({pagosAutorizados.length} {pagosAutorizados.length === 1 ? 'ticket' : 'tickets'})
+            Total ({lista.length} {lista.length === 1 ? 'ticket' : 'tickets'})
           </span>
           <span className="cxp-total__monto">{money(totalMonto)}</span>
         </div>

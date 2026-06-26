@@ -701,6 +701,13 @@ body {
   color: var(--ink);
   white-space: nowrap;
 }
+.cxp-row__comentario {
+  font-family: 'Georgia', serif;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--ink-mid);
+  margin-top: 0.15rem;
+}
 .cxp-row__check {
   flex-shrink: 0;
   width: 18px;
