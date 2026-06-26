@@ -97,7 +97,8 @@ export default function DetalleSolicitud({ s, onClose, onAutorizarPago }) {
           )}
           <Dato label="Costo estimado">{money(s.costo)}</Dato>
           {s.costoreal != null && <Dato label="Costo real">{money(s.costoreal)}</Dato>}
-          {s.estatus === 'Reparado' && <Dato label="Pago">{pagoLabel(s)}</Dato>}
+          {/* En 'Pago rechazado' se omite (redundante con el campo "Rechazado por"). */}
+          {s.estatus === 'Reparado' && est !== 'Pago rechazado' && <Dato label="Pago">{pagoLabel(s)}</Dato>}
           {est === 'Pago rechazado' && s.nombrepagador && (
             <Dato label="Rechazado por">{s.nombrepagador}</Dato>
           )}
