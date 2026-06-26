@@ -144,12 +144,22 @@ function DetalleSolicitud({ s, onClose }) {
           <Dato label="Costo estimado">{money(s.costo)}</Dato>
           {s.costoreal != null && <Dato label="Costo real">{money(s.costoreal)}</Dato>}
           {s.estatus === 'Reparado' && <Dato label="Pago">{pagoLabel(s)}</Dato>}
+          {displayEstatus(s) === 'Pago rechazado' && s.nombrepagador && (
+            <Dato label="Rechazado por">{s.nombrepagador}</Dato>
+          )}
         </div>
 
         <div className="detalle-dato detalle-dato--full">
           <span className="solicitud__field-label">Descripción</span>
           <span className="detalle-dato__valor">{s.descripcion}</span>
         </div>
+
+        {displayEstatus(s) === 'Pago rechazado' && s.comentariorechazo && (
+          <div className="detalle-dato detalle-dato--full">
+            <span className="solicitud__field-label">Motivo del rechazo de pago</span>
+            <span className="detalle-dato__valor">{s.comentariorechazo}</span>
+          </div>
+        )}
 
         {s.fotos?.length > 0 && (
           <div className="solicitud__fotos">

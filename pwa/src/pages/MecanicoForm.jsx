@@ -165,6 +165,12 @@ function MisSolicitudes({ refreshKey }) {
               {s.nombreaprobador}
             </div>
           )}
+          {displayEstatus(s) === 'Pago rechazado' && s.nombrepagador && (
+            <div className="solicitud__field">
+              <span className="solicitud__field-label">Rechazado por</span>
+              {s.nombrepagador}
+            </div>
+          )}
           {displayEstatus(s) === 'Pago rechazado' && s.comentariorechazo && (
             <div className="solicitud__field">
               <span className="solicitud__field-label">Motivo del rechazo de pago</span>
